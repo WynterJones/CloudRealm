@@ -1,6 +1,7 @@
-import { useRef } from 'react';
-import { Mesh, Vector3 } from 'three';
-import { Text } from '@react-three/drei';
+import { useRef, useState } from 'react';
+import { Mesh, Vector3, DoubleSide } from 'three';
+import { Text, useTexture } from '@react-three/drei';
+import { useFrame } from '@react-three/fiber';
 import { GameState } from '../types/game';
 
 interface BridgeProps {
@@ -11,11 +12,39 @@ interface CardData {
   position: [number, number, number];
   label: string;
   color: string;
+  texture: string;
 }
 
 interface StageData {
   title: string;
   cards: CardData[];
+}
+
+function FloatingCard({ position, texture }: { position: [number, number, number], texture: string }) {
+  const meshRef = useRef<Mesh>(null);
+  // Load texture for the card
+  const cardTexture = useTexture(texture);
+  
+  // Rotate the card slowly
+  useFrame((state) => {
+    if (meshRef.current) {
+      meshRef.current.rotation.y = state.clock.getElapsedTime() * 0.5;
+      meshRef.current.position.y = position[1] + Math.sin(state.clock.getElapsedTime()) * 0.1;
+    }
+  });
+
+  return (
+    <mesh ref={meshRef} position={position}>
+      {/* Card with 2:3 aspect ratio and thickness */}
+      <boxGeometry args={[1, 1.5, 0.05]} />
+      <meshStandardMaterial map={cardTexture} attachArray="material" />
+      <meshStandardMaterial map={cardTexture} attachArray="material" />
+      <meshStandardMaterial color="#222222" attachArray="material" />
+      <meshStandardMaterial color="#222222" attachArray="material" />
+      <meshStandardMaterial map={cardTexture} attachArray="material" />
+      <meshStandardMaterial map={cardTexture} attachArray="material" />
+    </mesh>
+  );
 }
 
 function Bridge({ gameState }: BridgeProps) {
@@ -26,25 +55,25 @@ function Bridge({ gameState }: BridgeProps) {
     {
       title: "WEAPON",
       cards: [
-        { position: [-2, 0.1, 0], label: "Sword", color: "#ff0000" },
-        { position: [0, 0.1, 0], label: "Fist", color: "#00ff00" },
-        { position: [2, 0.1, 0], label: "Axe", color: "#0000ff" }
+        { position: [-2, 0.1, 0], label: "Sword", color: "#ff0000", texture: "/models/card-sword.png" },
+        { position: [0, 0.1, 0], label: "Fist", color: "#00ff00", texture: "/models/card-fists.png" },
+        { position: [2, 0.1, 0], label: "Axe", color: "#0000ff", texture: "/models/card-axe.png" }
       ]
     },
     {
       title: "ARMOUR",
       cards: [
-        { position: [-2, 0.1, 0], label: "Steel", color: "#ff0000" },
-        { position: [0, 0.1, 0], label: "Knowledge", color: "#00ff00" },
-        { position: [2, 0.1, 0], label: "Gold", color: "#0000ff" }
+        { position: [-2, 0.1, 0], label: "Steel", color: "#ff0000", texture: "/models/card-sword.png" },
+        { position: [0, 0.1, 0], label: "Knowledge", color: "#00ff00", texture: "/models/card-fists.png" },
+        { position: [2, 0.1, 0], label: "Gold", color: "#0000ff", texture: "/models/card-axe.png" }
       ]
     },
     {
       title: "MAGIC",
       cards: [
-        { position: [-2, 0.1, 0], label: "Fire", color: "#ff0000" },
-        { position: [0, 0.1, 0], label: "Water", color: "#00ff00" },
-        { position: [2, 0.1, 0], label: "Love", color: "#0000ff" }
+        { position: [-2, 0.1, 0], label: "Fire", color: "#ff0000", texture: "/models/card-sword.png" },
+        { position: [0, 0.1, 0], label: "Water", color: "#00ff00", texture: "/models/card-fists.png" },
+        { position: [2, 0.1, 0], label: "Love", color: "#0000ff", texture: "/models/card-axe.png" }
       ]
     }
   ];
@@ -112,17 +141,11 @@ function Bridge({ gameState }: BridgeProps) {
                     <meshStandardMaterial color={card.color} transparent opacity={0.8} />
                   </mesh>
                   
-                  {/* Card label */}
-                  <Text
-                    position={[0, 0.2, 0]}
-                    fontSize={0.2}
-                    color="black"
-                    anchorX="center"
-                    anchorY="middle"
-                    rotation={[0, Math.PI, 0]}
-                  >
-                    {card.label}
-                  </Text>
+                  {/* Floating textured card */}
+                  <FloatingCard 
+                    position={[0, 1.5, 0]} 
+                    texture={card.texture}
+                  />
                 </group>
               );
             })}
