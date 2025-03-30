@@ -1,6 +1,7 @@
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Environment, Text } from '@react-three/drei';
-import { useState, useEffect } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { Stars, Text } from '@react-three/drei';
+import { useState, useEffect, useRef } from 'react';
+import { Color } from 'three';
 import Bridge from './Bridge.tsx';
 import Player from './Player.tsx';
 import UI from './UI.tsx';
@@ -61,11 +62,29 @@ function Game() {
           top: 0,
           left: 0
         }}
+        shadows
       >
-        <ambientLight intensity={1} />
-        <pointLight position={[10, 10, 10]} intensity={1.5} />
-        <pointLight position={[-10, 10, -10]} intensity={1.5} />
-        <Environment files="/models/sky.hdr" background />
+        {/* Space background */}
+        <color attach="background" args={['#000010']} />
+        <Stars radius={100} depth={50} count={2500} factor={4} saturation={0} fade />
+        
+        {/* Improved lighting setup */}
+        <ambientLight intensity={0.6} /> {/* Increased ambient light */}
+        <directionalLight 
+          position={[0, 10, 5]} 
+          intensity={1.2} 
+          color="#ffffff" 
+        />
+        <directionalLight 
+          position={[5, 8, 0]} 
+          intensity={0.8} 
+          color="#ffeecc"
+        />
+        <directionalLight 
+          position={[-5, 8, 0]} 
+          intensity={0.8} 
+          color="#ccddff"
+        />
         
         {/* Game Title */}
         <group position={[0, 8, -5]}>

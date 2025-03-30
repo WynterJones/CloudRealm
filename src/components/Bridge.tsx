@@ -76,12 +76,36 @@ function FloatingCard({ position, texture }: { position: [number, number, number
     <mesh ref={meshRef} position={position}>
       {/* Card with 2:3 aspect ratio and thickness */}
       <boxGeometry args={[1, 1.5, 0.05]} />
-      <meshStandardMaterial attach="material-0" map={cardTexture} />
-      <meshStandardMaterial attach="material-1" map={cardTexture} />
+      <meshStandardMaterial 
+        attach="material-0" 
+        map={cardTexture}
+        emissive="#ffffff"
+        emissiveMap={cardTexture}
+        emissiveIntensity={0.5}
+      />
+      <meshStandardMaterial 
+        attach="material-1" 
+        map={cardTexture}
+        emissive="#ffffff"
+        emissiveMap={cardTexture}
+        emissiveIntensity={0.5}
+      />
       <meshStandardMaterial attach="material-2" color="#222222" />
       <meshStandardMaterial attach="material-3" color="#222222" />
-      <meshStandardMaterial attach="material-4" map={cardTexture} />
-      <meshStandardMaterial attach="material-5" map={cardTexture} />
+      <meshStandardMaterial 
+        attach="material-4" 
+        map={cardTexture}
+        emissive="#ffffff"
+        emissiveMap={cardTexture}
+        emissiveIntensity={0.5}
+      />
+      <meshStandardMaterial 
+        attach="material-5" 
+        map={cardTexture}
+        emissive="#ffffff"
+        emissiveMap={cardTexture}
+        emissiveIntensity={0.5}
+      />
     </mesh>
   );
 }

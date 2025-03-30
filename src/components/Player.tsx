@@ -219,6 +219,9 @@ function Player({ gameState, setGameState }: PlayerProps) {
       const targetPos = new Vector3(positionRef.current.x, 0.5, positionRef.current.z);
       currentPos.lerp(targetPos, positionLerpFactor);
       
+      // Meditation bobbing effect - makes the character float up and down slightly
+      playerRef.current.position.y = 0.5 + Math.sin(state.clock.getElapsedTime() * 1.5) * 0.05;
+      
       // Update debug sphere position to match player's hitbox position
       if (debugSphereRef.current && showDebug) {
         debugSphereRef.current.position.copy(currentPos);
@@ -227,11 +230,18 @@ function Player({ gameState, setGameState }: PlayerProps) {
       // Smoothly rotate player model to face movement direction
       if (modelRef.current) {
         const currentRotation = modelRef.current.rotation.y;
-        modelRef.current.rotation.y = MathUtils.lerp(
-          currentRotation,
-          targetRotation.current,
-          rotationSpeed
-        );
+        
+        if (velocity.current.length() > 0.01) {
+          // When moving, rotate to face movement direction
+          modelRef.current.rotation.y = MathUtils.lerp(
+            currentRotation,
+            targetRotation.current,
+            rotationSpeed
+          );
+        } else {
+          // When still, apply a slow meditation spin
+          modelRef.current.rotation.y += delta * 0.2; // Slow rotation speed
+        }
       }
 
       // Don't check for collisions during cooldown
