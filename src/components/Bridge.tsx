@@ -1,6 +1,6 @@
-import { useRef, useState } from 'react';
-import { Mesh, Vector3, DoubleSide } from 'three';
-import { Text, useTexture } from '@react-three/drei';
+import React, { useRef, useState } from 'react';
+import { Mesh, Vector3, DoubleSide, Shape, ExtrudeGeometry } from 'three';
+import { Text, useTexture, Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { GameState } from '../types/game';
 
@@ -20,6 +20,45 @@ interface StageData {
   cards: CardData[];
 }
 
+interface TitleBackgroundProps {
+  children: React.ReactNode;
+  width: number;
+  height: number;
+  position: [number, number, number];
+}
+
+function TitleBackground({ children, width, height, position }: TitleBackgroundProps) {
+  // Create rounded rectangle shape
+  const shape = new Shape();
+  const radius = 0.1;
+  
+  shape.moveTo(-width/2 + radius, -height/2);
+  shape.lineTo(width/2 - radius, -height/2);
+  shape.quadraticCurveTo(width/2, -height/2, width/2, -height/2 + radius);
+  shape.lineTo(width/2, height/2 - radius);
+  shape.quadraticCurveTo(width/2, height/2, width/2 - radius, height/2);
+  shape.lineTo(-width/2 + radius, height/2);
+  shape.quadraticCurveTo(-width/2, height/2, -width/2, height/2 - radius);
+  shape.lineTo(-width/2, -height/2 + radius);
+  shape.quadraticCurveTo(-width/2, -height/2, -width/2 + radius, -height/2);
+
+  const extrudeSettings = {
+    steps: 1,
+    depth: 0.05,
+    bevelEnabled: false
+  };
+
+  return (
+    <group position={position}>
+      <mesh position={[0, 0, -0.05]}>
+        <extrudeGeometry args={[shape, extrudeSettings]} />
+        <meshStandardMaterial color="black" />
+      </mesh>
+      {children}
+    </group>
+  );
+}
+
 function FloatingCard({ position, texture }: { position: [number, number, number], texture: string }) {
   const meshRef = useRef<Mesh>(null);
   // Load texture for the card
@@ -37,12 +76,12 @@ function FloatingCard({ position, texture }: { position: [number, number, number
     <mesh ref={meshRef} position={position}>
       {/* Card with 2:3 aspect ratio and thickness */}
       <boxGeometry args={[1, 1.5, 0.05]} />
-      <meshStandardMaterial map={cardTexture} attachArray="material" />
-      <meshStandardMaterial map={cardTexture} attachArray="material" />
-      <meshStandardMaterial color="#222222" attachArray="material" />
-      <meshStandardMaterial color="#222222" attachArray="material" />
-      <meshStandardMaterial map={cardTexture} attachArray="material" />
-      <meshStandardMaterial map={cardTexture} attachArray="material" />
+      <meshStandardMaterial attach="material-0" map={cardTexture} />
+      <meshStandardMaterial attach="material-1" map={cardTexture} />
+      <meshStandardMaterial attach="material-2" color="#222222" />
+      <meshStandardMaterial attach="material-3" color="#222222" />
+      <meshStandardMaterial attach="material-4" map={cardTexture} />
+      <meshStandardMaterial attach="material-5" map={cardTexture} />
     </mesh>
   );
 }
@@ -63,9 +102,9 @@ function Bridge({ gameState }: BridgeProps) {
     {
       title: "ARMOUR",
       cards: [
-        { position: [-2, 0.1, 0], label: "Steel", color: "#ff0000", texture: "/models/card-sword.png" },
-        { position: [0, 0.1, 0], label: "Knowledge", color: "#00ff00", texture: "/models/card-fists.png" },
-        { position: [2, 0.1, 0], label: "Gold", color: "#0000ff", texture: "/models/card-axe.png" }
+        { position: [-2, 0.1, 0], label: "Steel", color: "#ff0000", texture: "/models/card-gold.png" },
+        { position: [0, 0.1, 0], label: "Knowledge", color: "#00ff00", texture: "/models/card-knowledge.png" },
+        { position: [2, 0.1, 0], label: "Gold", color: "#0000ff", texture: "/models/card-steel.png" }
       ]
     },
     {
@@ -100,19 +139,27 @@ function Bridge({ gameState }: BridgeProps) {
 
         return (
           <group key={stage} position={[0, 0, 10 + stage * 15]}>
-            {/* Stage title */}
-            <Text
-              position={[0, 2, 0]}
-              fontSize={0.8}
-              color="white"
-              anchorX="center"
-              anchorY="middle"
-              outlineWidth={0.05}
-              outlineColor="#000000"
-              rotation={[0, Math.PI, 0]}
-            >
-              {stageData[stage].title}
-            </Text>
+            {/* Stage title with background */}
+            <TitleBackground width={2.5} height={0.8} position={[0, 2.5, 0]}>
+              <Html
+                position={[0, 0, 0.5]}
+                transform
+                occlude={false}
+                zIndexRange={[100, 0]}
+                style={{
+                  color: 'white',
+                  fontSize: '20px',
+                  fontWeight: 'bold',
+                  textAlign: 'center',
+                  width: '120px',
+                  userSelect: 'none',
+                  textShadow: '0 0 10px white',
+                  transform: 'scaleX(-1)'
+                }}
+              >
+                {stageData[stage].title}
+              </Html>
+            </TitleBackground>
 
             {/* Card blocks for each stage */}
             {stageData[stage].cards.map((card, index) => {
@@ -129,21 +176,9 @@ function Bridge({ gameState }: BridgeProps) {
               
               return (
                 <group key={index} position={new Vector3(...card.position)}>
-                  {/* Card body */}
-                  <mesh rotation={[0, Math.PI, 0]}>
-                    <boxGeometry args={[1.2, 0.1, 1.8]} />
-                    <meshStandardMaterial color="#FFFFFF" />
-                  </mesh>
-                  
-                  {/* Card color highlight */}
-                  <mesh position={[0, 0.07, 0]} rotation={[0, Math.PI, 0]}>
-                    <boxGeometry args={[1, 0.05, 1.6]} />
-                    <meshStandardMaterial color={card.color} transparent opacity={0.8} />
-                  </mesh>
-                  
                   {/* Floating textured card */}
                   <FloatingCard 
-                    position={[0, 1.5, 0]} 
+                    position={[0, 0.8, 0]} 
                     texture={card.texture}
                   />
                 </group>
