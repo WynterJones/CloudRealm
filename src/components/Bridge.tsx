@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
-import { Mesh, Vector3, DoubleSide, Shape, ExtrudeGeometry } from 'three';
+import { Mesh, Vector3, DoubleSide, Shape, ExtrudeGeometry, RepeatWrapping, TextureLoader, MeshStandardMaterial, Texture } from 'three';
 import { Text, useTexture, Html } from '@react-three/drei';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useLoader } from '@react-three/fiber';
 import { GameState } from '../types/game';
 
 interface BridgeProps {
@@ -86,46 +86,102 @@ function FloatingCard({ position, texture }: { position: [number, number, number
   );
 }
 
+interface RailingMeshProps {
+  position: [number, number, number];
+  texture: Texture;
+}
+
+function RailingMesh({ position, texture }: RailingMeshProps) {
+  const railingRef = useRef<Mesh>(null);
+  
+  // Use a single shared material for all faces
+  const material = new MeshStandardMaterial({ 
+    map: texture,
+    color: "#888888"
+  });
+  
+  return (
+    <mesh ref={railingRef} position={position}>
+      <boxGeometry args={[0.2, 0.3, 500]} />
+      <primitive object={material} attach="material" />
+    </mesh>
+  );
+}
+
 function Bridge({ gameState }: BridgeProps) {
   const bridgeRef = useRef<Mesh>(null);
+  
+  // Load and configure textures
+  const groundTexture = useLoader(TextureLoader, '/models/ground.png');
+  const railingTexture = useLoader(TextureLoader, '/models/railing.png');
+  
+  // Set texture repeats
+  groundTexture.wrapS = groundTexture.wrapT = RepeatWrapping;
+  railingTexture.wrapS = railingTexture.wrapT = RepeatWrapping;
+  
+  // Reduced repeat for ground to make texture bigger
+  groundTexture.repeat.set(0.5, 50);
+  railingTexture.repeat.set(0.5, 250);
+  
+  // Improve texture quality
+  groundTexture.anisotropy = 16;
 
   // Card data for each stage - lowered y position to 0.1 from 0.3
   const stageData: StageData[] = [
     {
       title: "WEAPON",
       cards: [
-        { position: [-2, 0.1, 0], label: "Sword", color: "#ff0000", texture: "/models/card-sword.png" },
-        { position: [0, 0.1, 0], label: "Fist", color: "#00ff00", texture: "/models/card-fists.png" },
-        { position: [2, 0.1, 0], label: "Axe", color: "#0000ff", texture: "/models/card-axe.png" }
+        { position: [-2, 0.42, 0], label: "Sword", color: "#ff0000", texture: "/models/card-sword.png" },
+        { position: [0, 0.32, 0], label: "Fist", color: "#00ff00", texture: "/models/card-fists.png" },
+        { position: [2, 0.42, 0], label: "Axe", color: "#0000ff", texture: "/models/card-axe.png" }
       ]
     },
     {
       title: "ARMOUR",
       cards: [
-        { position: [-2, 0.1, 0], label: "Steel", color: "#ff0000", texture: "/models/card-gold.png" },
-        { position: [0, 0.1, 0], label: "Knowledge", color: "#00ff00", texture: "/models/card-knowledge.png" },
-        { position: [2, 0.1, 0], label: "Gold", color: "#0000ff", texture: "/models/card-steel.png" }
+        { position: [-2, 0.42, 0], label: "Steel", color: "#ff0000", texture: "/models/card-gold.png" },
+        { position: [0, 0.32, 0], label: "Knowledge", color: "#00ff00", texture: "/models/card-knowledge.png" },
+        { position: [2, 0.42, 0], label: "Gold", color: "#0000ff", texture: "/models/card-steel.png" }
       ]
     },
     {
       title: "MAGIC",
       cards: [
-        { position: [-2, 0.1, 0], label: "Fire", color: "#ff0000", texture: "/models/card-sword.png" },
-        { position: [0, 0.1, 0], label: "Water", color: "#00ff00", texture: "/models/card-fists.png" },
-        { position: [2, 0.1, 0], label: "Love", color: "#0000ff", texture: "/models/card-axe.png" }
+        { position: [-2, 0.42, 0], label: "Fire", color: "#ff0000", texture: "/models/card-fire.png" },
+        { position: [0, 0.32, 0], label: "Water", color: "#00ff00", texture: "/models/card-water.png" },
+        { position: [2, 0.42, 0], label: "Love", color: "#0000ff", texture: "/models/card-love.png" }
       ]
     }
   ];
 
   return (
     <group>
+      {/* Main bridge surface */}
       <mesh
         ref={bridgeRef}
         position={[0, -0.5, 25]}
         rotation={[0, 0, 0]}
       >
-        <boxGeometry args={[4, 1, 60]} />
-        <meshStandardMaterial color="#666666" />
+        <boxGeometry args={[4, 1, 500]} />
+        <meshStandardMaterial map={groundTexture} />
+      </mesh>
+      
+      {/* Left curb */}
+      <mesh position={[-2.1, 0.01, 25]}>
+        <boxGeometry args={[0.2, 0.3, 500]} />
+        <meshStandardMaterial map={railingTexture} color="#888888" side={DoubleSide} />
+      </mesh>
+      
+      {/* Right curb */}
+      <mesh position={[2.1, 0.01, 25]}>
+        <boxGeometry args={[0.2, 0.3, 500]} />
+        <meshStandardMaterial map={railingTexture} color="#888888" side={DoubleSide} />
+      </mesh>
+      
+      {/* Distant fog effect */}
+      <mesh position={[0, 0, 250]} rotation={[0, 0, 0]}>
+        <planeGeometry args={[20, 10]} />
+        <meshBasicMaterial color="#AAAAAA" transparent opacity={0.7} />
       </mesh>
       
       {/* Stage markers */}

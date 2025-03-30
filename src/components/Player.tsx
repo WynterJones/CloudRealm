@@ -87,6 +87,11 @@ function Player({ gameState, setGameState }: PlayerProps) {
   const applyCardSelection = useCallback((stage: number, cardType: string, cardX: number, cardZ: number) => {
     if (cooldownRef.current) return;
     
+    // Play meow sound when a card is selected
+    const meowSound = new Audio('/models/meow.mp3');
+    meowSound.volume = 0.7;
+    meowSound.play();
+    
     // Update refs first
     if (stage === 0) {
       weaponRef.current = cardType as WeaponType;
@@ -181,8 +186,8 @@ function Player({ gameState, setGameState }: PlayerProps) {
       velocity.current.lerp(targetVelocity.current, keys.size ? acceleration : deceleration);
       
       // Calculate new position
-      const newX = Math.max(Math.min(positionRef.current.x + velocity.current.x, 2), -2);
-      const newZ = Math.max(Math.min(positionRef.current.z + velocity.current.y, 55), 0);
+      const newX = Math.max(Math.min(positionRef.current.x + velocity.current.x, 1.9), -1.9);
+      const newZ = Math.max(Math.min(positionRef.current.z + velocity.current.y, 250), 0);
       
       // Update position - only position! Not other properties
       updatePosition(newX, newZ);
