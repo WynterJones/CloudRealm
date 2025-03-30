@@ -21,30 +21,30 @@ interface StageData {
 function Bridge({ gameState }: BridgeProps) {
   const bridgeRef = useRef<Mesh>(null);
 
-  // Card data for each stage
+  // Card data for each stage - lowered y position to 0.1 from 0.3
   const stageData: StageData[] = [
     {
       title: "WEAPON",
       cards: [
-        { position: [-2, 0.5, 0], label: "Sword", color: "#ff0000" },
-        { position: [0, 0.5, 0], label: "Fist", color: "#00ff00" },
-        { position: [2, 0.5, 0], label: "Axe", color: "#0000ff" }
+        { position: [-2, 0.1, 0], label: "Sword", color: "#ff0000" },
+        { position: [0, 0.1, 0], label: "Fist", color: "#00ff00" },
+        { position: [2, 0.1, 0], label: "Axe", color: "#0000ff" }
       ]
     },
     {
       title: "ARMOUR",
       cards: [
-        { position: [-2, 0.5, 0], label: "Steel", color: "#ff0000" },
-        { position: [0, 0.5, 0], label: "Knowledge", color: "#00ff00" },
-        { position: [2, 0.5, 0], label: "Gold", color: "#0000ff" }
+        { position: [-2, 0.1, 0], label: "Steel", color: "#ff0000" },
+        { position: [0, 0.1, 0], label: "Knowledge", color: "#00ff00" },
+        { position: [2, 0.1, 0], label: "Gold", color: "#0000ff" }
       ]
     },
     {
       title: "MAGIC",
       cards: [
-        { position: [-2, 0.5, 0], label: "Fire", color: "#ff0000" },
-        { position: [0, 0.5, 0], label: "Water", color: "#00ff00" },
-        { position: [2, 0.5, 0], label: "Love", color: "#0000ff" }
+        { position: [-2, 0.1, 0], label: "Fire", color: "#ff0000" },
+        { position: [0, 0.1, 0], label: "Water", color: "#00ff00" },
+        { position: [2, 0.1, 0], label: "Love", color: "#0000ff" }
       ]
     }
   ];
@@ -53,10 +53,10 @@ function Bridge({ gameState }: BridgeProps) {
     <group>
       <mesh
         ref={bridgeRef}
-        position={[0, -0.5, 20]}
+        position={[0, -0.5, 25]}
         rotation={[0, 0, 0]}
       >
-        <boxGeometry args={[4, 1, 40]} />
+        <boxGeometry args={[4, 1, 60]} />
         <meshStandardMaterial color="#666666" />
       </mesh>
       
@@ -80,6 +80,7 @@ function Bridge({ gameState }: BridgeProps) {
               anchorY="middle"
               outlineWidth={0.05}
               outlineColor="#000000"
+              rotation={[0, Math.PI, 0]}
             >
               {stageData[stage].title}
             </Text>
@@ -100,13 +101,13 @@ function Bridge({ gameState }: BridgeProps) {
               return (
                 <group key={index} position={new Vector3(...card.position)}>
                   {/* Card body */}
-                  <mesh rotation={[0, 0, 0]}>
+                  <mesh rotation={[0, Math.PI, 0]}>
                     <boxGeometry args={[1.2, 0.1, 1.8]} />
                     <meshStandardMaterial color="#FFFFFF" />
                   </mesh>
                   
                   {/* Card color highlight */}
-                  <mesh position={[0, 0.07, 0]} rotation={[0, 0, 0]}>
+                  <mesh position={[0, 0.07, 0]} rotation={[0, Math.PI, 0]}>
                     <boxGeometry args={[1, 0.05, 1.6]} />
                     <meshStandardMaterial color={card.color} transparent opacity={0.8} />
                   </mesh>
@@ -118,6 +119,7 @@ function Bridge({ gameState }: BridgeProps) {
                     color="black"
                     anchorX="center"
                     anchorY="middle"
+                    rotation={[0, Math.PI, 0]}
                   >
                     {card.label}
                   </Text>
