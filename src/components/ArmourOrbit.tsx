@@ -16,6 +16,24 @@ function ArmourOrbit({ armourType, bossDefeated = false, hasAllItems = false }: 
   const [armourModel, setArmourModel] = useState<Group | null>(null);
   const [isAttacking, setIsAttacking] = useState(false);
   const [exitProgress, setExitProgress] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
+  
+  // Detect mobile devices
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+      setIsMobile(mobile);
+    };
+    
+    // Initial check
+    checkMobile();
+    
+    // Add resize listener
+    window.addEventListener('resize', checkMobile);
+    
+    // Cleanup
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
   
   // Load armor model in an effect to avoid conditional hook issues
   useEffect(() => {
@@ -43,10 +61,22 @@ function ArmourOrbit({ armourType, bossDefeated = false, hasAllItems = false }: 
     }
   }, [armourType]);
   
-  // Fixed screen position settings - on RIGHT side of screen
-  const screenX = 0.6; // Right side of screen
-  const screenY = -0.4; // Lower part of view
-  const screenZ = -1.0; // Distance from camera
+  // Fixed screen position settings - adjusted for mobile
+  const getScreenPositions = () => {
+    if (isMobile) {
+      return {
+        x: 0.3, // Closer to center on mobile
+        y: -0.4, // Same vertical position
+        z: -1.0  // Same distance from camera
+      };
+    } else {
+      return {
+        x: 0.6, // Original right side position for desktop
+        y: -0.4, // Lower part of view
+        z: -1.0  // Distance from camera
+      };
+    }
+  };
   
   // For animation effects
   const spinSpeed = 0.3; // Slightly slower spin speed
@@ -55,6 +85,9 @@ function ArmourOrbit({ armourType, bossDefeated = false, hasAllItems = false }: 
   // Animation frame - always called regardless of model loading status
   useFrame((state, delta) => {
     if (!armourRef.current) return;
+    
+    // Get current screen positions based on device
+    const { x: screenX, y: screenY, z: screenZ } = getScreenPositions();
     
     // Handle boss defeated exit animation
     if (bossDefeated) {
