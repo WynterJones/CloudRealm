@@ -69,7 +69,12 @@ function UI({ gameState, bossHealth, bossDefeated = false, onMobileMove }: UIPro
     });
     
     console.log(`UI sending movement: (${normalizedX}, ${-normalizedY})`);
-    onMobileMove?.(normalizedX, -normalizedY);
+    if (onMobileMove) {
+      // We're sending raw normalized values - Player component will handle the inversion
+      onMobileMove(normalizedX, -normalizedY);
+    } else {
+      console.warn('onMobileMove handler not provided to UI component');
+    }
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -102,7 +107,12 @@ function UI({ gameState, bossHealth, bossDefeated = false, onMobileMove }: UIPro
     });
     
     console.log(`UI sending movement: (${normalizedX}, ${-normalizedY})`);
-    onMobileMove?.(normalizedX, -normalizedY);
+    if (onMobileMove) {
+      // Keep consistent with touch start
+      onMobileMove(normalizedX, -normalizedY);
+    } else {
+      console.warn('onMobileMove handler not provided to UI component');
+    }
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
@@ -114,7 +124,11 @@ function UI({ gameState, bossHealth, bossDefeated = false, onMobileMove }: UIPro
     setJoystickPosition({ x: 0, y: 0 });
     
     console.log(`UI sending movement: (0, 0)`);
-    onMobileMove?.(0, 0);
+    if (onMobileMove) {
+      onMobileMove(0, 0);
+    } else {
+      console.warn('onMobileMove handler not provided to UI component');
+    }
   };
 
   // Show boss name with animation when all items are collected

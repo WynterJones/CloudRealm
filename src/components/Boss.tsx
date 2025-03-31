@@ -24,6 +24,14 @@ function Boss({ playerPosition, gameState, bossHealth, updateBossHealth }: BossP
   const damageRef = useRef(0);
   const bossAudioRef = useRef<HTMLAudioElement | null>(null);
   
+  // Create a ref to track the latest health value - initialize with props
+  const bossHealthRef = useRef(bossHealth);
+  
+  // Update our health ref whenever props change
+  useEffect(() => {
+    bossHealthRef.current = bossHealth;
+  }, [bossHealth]);
+  
   // Effect particles for different magic types
   const [rainParticles, setRainParticles] = useState<Points | null>(null);
   const [fireParticles, setFireParticles] = useState<Points | null>(null);
@@ -357,19 +365,25 @@ function Boss({ playerPosition, gameState, bossHealth, updateBossHealth }: BossP
     const playerForwardZ = playerPosition.z + movementState.current.currentDistance;
     
     // Calculate damage and attack at intervals if boss is active
-    if (!isDescending && !isDying && gameState.magic) {
+    if (!isDescending && !isDying && gameState.magic && gameState.weapon && gameState.armour) {
       const currentTime = state.clock.getElapsedTime();
       
       if (currentTime - combatState.current.lastAttackTime > combatState.current.attackInterval) {
         // Time for a new attack
         const damage = calculateDamage();
-        const newHealth = Math.max(0, bossHealth - damage);
+        // Use our local ref for the current health value - this is the key fix
+        const newHealth = Math.max(0, bossHealthRef.current - damage);
+        
+        console.log(`Boss taking damage: ${damage}, Health: ${bossHealthRef.current} -> ${newHealth}`);
+        
+        // Apply damage by updating health
         updateBossHealth(newHealth);
         
-        // Check if the boss is dying
-        if (newHealth === 0 && !isDying) {
+        // Check if the boss is dying - need to check exactly zero to avoid floating point issues
+        if (newHealth <= 0 && !isDying) {
           setIsDying(true);
           damageRef.current = currentTime;
+          console.log('Boss dying triggered!');
         }
         
         // Show damage effect

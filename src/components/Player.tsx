@@ -59,7 +59,7 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
   const cooldownRef = useRef(false);
 
   // Debug flag
-  const showDebug = false;
+  const showDebug = true;
 
   // Track if we've forced a selection
   const [selectionForced, setSelectionForced] = useState(false);
@@ -81,14 +81,22 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
         return;
       }
       
-      // Set active flag and update velocity
+      // Set active flag and update velocity with direct input values
+      // FLIP X AXIS by negating the x value to correct left/right movement
       mobileInputActive.current = true;
-      console.log(`Setting mobileInputActive to TRUE`);
+      mobileVelocity.current.set(-x, y); // Negate x to flip left/right
+      console.log(`Setting mobileInputActive to TRUE and mobileVelocity to (${-x}, ${y})`);
       
-      // DIRECT APPROACH - Modify position immediately
-      // Scale inputs for better movement speed
-      const scaledX = -x * 0.5; // Invert X for correct left/right
-      const scaledY = y * 0.5;  
+      // Start music on first movement if not already started
+      if (!musicStartedRef.current) {
+        playMusic();
+        musicStartedRef.current = true;
+      }
+      
+      // DIRECT APPROACH - Modify position immediately for responsive feel
+      // Scale inputs to match WASD speed exactly
+      const scaledX = -x * 0.0005; // Further reduced for extremely slow movement
+      const scaledY = y * 0.0005;  // Further reduced for extremely slow movement
       
       // Calculate new position
       const newX = Math.max(Math.min(positionRef.current.x + scaledX, 1.9), -1.9);
@@ -106,17 +114,12 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
         playerRef.current.position.z = newZ;
         console.log(`Directly updated mesh position to (${newX}, ${newZ})`);
       }
-      
-      if (!musicStartedRef.current) {
-        playMusic();
-        musicStartedRef.current = true;
-      }
     },
     clearMobileInput: () => {
       console.log('PLAYER clearMobileInput CALLED');
       mobileInputActive.current = false;
-      console.log(`Setting mobileInputActive to FALSE`);
       mobileVelocity.current.set(0, 0);
+      console.log('Setting mobileInputActive to FALSE');
     }
   }));
 
@@ -307,33 +310,32 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
       if (mobileInputActive.current) {
         console.log(`Mobile active check: active=${mobileInputActive.current}, velocity length=${mobileVelocity.current.length()}`);
         
-        if (mobileVelocity.current.length() > 0.05) {
+        // Always prioritize mobile input when active - clear any keyboard inputs
+        targetVelocity.current.set(0, 0);
+        keys.clear();
+        
+        if (mobileVelocity.current.length() > 0.01) { // Reduced sensitivity threshold
           console.log(`Using mobile velocity: (${mobileVelocity.current.x}, ${mobileVelocity.current.y})`);
           // Replace keyboard values completely when using mobile
           targetVelocity.current.copy(mobileVelocity.current);
           
-          // Scale mobile movement appropriately - use direct values rather than normalizing
-          // This allows for variable speed with joystick distance
-          targetVelocity.current.multiplyScalar(speed * 3.0); // Triple speed for very responsive mobile feel
+          // Scale mobile movement to match much slower than WASD speed
+          if (targetVelocity.current.length() > 0) {
+            targetVelocity.current.normalize().multiplyScalar(speed * 0.5); // Reduced to 50% of WASD speed
+          }
           console.log(`Scaled target velocity: (${targetVelocity.current.x}, ${targetVelocity.current.y})`);
         }
       }
       else {
-        console.log('Mobile inactive');
         // Normalize diagonal movement for keyboard
         if (targetVelocity.current.length() > 0) {
           targetVelocity.current.normalize().multiplyScalar(speed);
         }
       }
       
-      // Log final target velocity
-      if (targetVelocity.current.length() > 0) {
-        console.log(`Final target velocity: (${targetVelocity.current.x}, ${targetVelocity.current.y})`);
-      }
-      
-      // Apply acceleration/deceleration - use higher acceleration for mobile
+      // Apply acceleration/deceleration - use extremely slow acceleration for mobile
       const accelerationFactor = (keys.size || mobileInputActive.current) ? 
-        (mobileInputActive.current ? 0.5 : acceleration) : deceleration;
+        (mobileInputActive.current ? 0.05 : acceleration) : deceleration; // Reduced to 0.05 for extremely smooth mobile movement
       velocity.current.lerp(targetVelocity.current, accelerationFactor);
       
       // Calculate new position
@@ -485,6 +487,23 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
         >
           Press 1-3 to select cards
         </Text>
+        
+        {/* Mobile input debug */}
+        {showDebug && (
+          <Text
+            position={[0, 3.5, 5]}
+            fontSize={0.25}
+            color={mobileInputActive.current ? "#00ff00" : "#ff0000"}
+            anchorX="center"
+            anchorY="middle"
+            outlineWidth={0.05}
+            outlineColor="#000000"
+            rotation={[0, Math.PI, 0]}
+          >
+            Mobile: {mobileInputActive.current ? "ACTIVE" : "INACTIVE"} 
+            ({mobileVelocity.current.x.toFixed(2)}, {mobileVelocity.current.y.toFixed(2)})
+          </Text>
+        )}
       </group>
       
       <PerspectiveCamera ref={cameraRef} makeDefault position={[0, 1.2, -3]} fov={65} />

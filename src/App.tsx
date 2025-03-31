@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import Game from './components/Game';
 import { GameState } from './types/game';
 import './index.css';
@@ -16,9 +16,17 @@ function App() {
     bossDefeated: false
   });
 
-  const playMusic = () => {
-    // This will be handled by the Game component
-  };
+  // Track if music has started
+  const [musicStarted, setMusicStarted] = useState(false);
+
+  // Function to start background music - will be called after user interaction (WASD/mobile joystick)
+  const playMusic = useCallback(() => {
+    if (!musicStarted) {
+      console.log('Starting background music after user interaction');
+      setMusicStarted(true);
+      // Actual playback happens in Game component
+    }
+  }, [musicStarted]);
 
   return (
     <div className="w-screen h-screen">
