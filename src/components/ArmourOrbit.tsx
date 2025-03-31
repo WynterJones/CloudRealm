@@ -20,10 +20,10 @@ function ArmourOrbit({ armourType }: ArmourOrbitProps) {
     // Select the correct model based on armor type
     switch (armourType) {
       case 'gold':
-        modelPath = '/models/steel.glb'; // Will be '/models/gold.glb'
+        modelPath = '/models/gold.glb'; // Will be '/models/gold.glb'
         break;
       case 'steel':
-        modelPath = '/models/gold.glb'; // Will be '/models/steel.glb'
+        modelPath = '/models/steel.glb'; // Will be '/models/steel.glb'
         break;
       case 'knowledge':
         modelPath = '/models/book.glb'; // Will be '/models/book.glb'

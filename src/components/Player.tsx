@@ -98,6 +98,43 @@ function Player({ gameState, setGameState, playMusic }: PlayerProps) {
     meowSound.volume = 0.7;
     meowSound.play();
     
+    // Play weapon-specific voice when weapon is selected
+    if (stage === 0) {
+      // Delay the weapon voice to play after the meow sound
+      setTimeout(() => {
+        const voiceFile = `/models/voice-${cardType}.mp3`;
+        const weaponVoice = new Audio(voiceFile);
+        weaponVoice.volume = 1.0;
+        weaponVoice.play().catch(error => {
+          console.log(`Failed to play weapon voice: ${error}`);
+        });
+      }, 500); // 500ms delay to play after the meow
+    }
+    // Play armor-specific voice when armor is selected
+    else if (stage === 1) {
+      // Delay the armor voice to play after the meow sound
+      setTimeout(() => {
+        const voiceFile = `/models/voice-${cardType}.mp3`;
+        const armorVoice = new Audio(voiceFile);
+        armorVoice.volume = 1.0;
+        armorVoice.play().catch(error => {
+          console.log(`Failed to play armor voice: ${error}`);
+        });
+      }, 500); // 500ms delay to play after the meow
+    }
+    // Play magic-specific voice when magic is selected
+    else if (stage === 2) {
+      // Delay the magic voice to play after the meow sound
+      setTimeout(() => {
+        const voiceFile = `/models/voice-${cardType}.mp3`;
+        const magicVoice = new Audio(voiceFile);
+        magicVoice.volume = 1.0;
+        magicVoice.play().catch(error => {
+          console.log(`Failed to play magic voice: ${error}`);
+        });
+      }, 500); // 500ms delay to play after the meow
+    }
+    
     // Update refs first
     if (stage === 0) {
       weaponRef.current = cardType as WeaponType;

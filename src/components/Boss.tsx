@@ -19,6 +19,7 @@ function Boss({ playerPosition, gameState }: BossProps) {
   const [isDying, setIsDying] = useState(false);
   const [isDefeated, setIsDefeated] = useState(false);
   const [showDamageEffect, setShowDamageEffect] = useState(false);
+  const [showBossNameAnimation, setShowBossNameAnimation] = useState(false);
   const damageRef = useRef(0);
   
   // Effect particles for different magic types
@@ -83,6 +84,11 @@ function Boss({ playerPosition, gameState }: BossProps) {
       
       // Fade in animation
       const descentDuration = 3000; // 3 seconds for descent
+      
+      // Show boss name with animation after the boss has descended a bit
+      setTimeout(() => {
+        setShowBossNameAnimation(true);
+      }, 1500);
       
       setTimeout(() => {
         setIsDescending(false);
@@ -425,34 +431,41 @@ function Boss({ playerPosition, gameState }: BossProps) {
         {/* UI for boss health */}
         <Html position={[0, 5, 0]} center>
           <div style={{ 
-            width: '200px', 
+            width: '250px', 
             background: 'rgba(0, 0, 0, 0.7)', 
-            padding: '8px', 
-            borderRadius: '4px',
+            padding: '10px', 
+            borderRadius: '8px',
             textAlign: 'center',
-            transform: 'scale(1.5)'
+            transform: 'scale(2)',
+            animation: showBossNameAnimation ? 'fadeInScale 1s ease-out' : 'none',
+            boxShadow: '0 0 20px rgba(255, 0, 0, 0.5)'
           }}>
             <div style={{ 
               color: 'white', 
-              marginBottom: '5px',
+              marginBottom: '8px',
               fontWeight: 'bold',
               textTransform: 'uppercase',
-              fontFamily: 'Arial, sans-serif'
+              fontFamily: 'Arial, sans-serif',
+              fontSize: '18px',
+              letterSpacing: '2px',
+              textShadow: '0 0 10px red, 0 0 15px red'
             }}>
-              The Mind
+              THE MIND
             </div>
             <div style={{ 
               width: '100%', 
-              height: '10px', 
+              height: '12px', 
               background: '#333', 
-              borderRadius: '5px',
-              overflow: 'hidden'
+              borderRadius: '6px',
+              overflow: 'hidden',
+              boxShadow: 'inset 0 0 5px rgba(0, 0, 0, 0.5)'
             }}>
               <div style={{ 
                 width: `${bossHealth}%`, 
                 height: '100%', 
                 background: bossHealth > 50 ? '#4CAF50' : bossHealth > 20 ? '#FFEB3B' : '#F44336',
-                transition: 'width 0.3s, background 0.3s'
+                transition: 'width 0.3s, background 0.3s',
+                boxShadow: '0 0 10px rgba(255, 255, 255, 0.3)'
               }}></div>
             </div>
           </div>
@@ -464,8 +477,8 @@ function Boss({ playerPosition, gameState }: BossProps) {
             <div style={{ 
               color: 'red', 
               fontWeight: 'bold',
-              fontSize: '18px',
-              textShadow: '0 0 3px black',
+              fontSize: '24px',
+              textShadow: '0 0 5px black, 0 0 10px red',
               animation: 'damageAnim 0.5s',
               fontFamily: 'Arial, sans-serif'
             }}>
@@ -479,6 +492,23 @@ function Boss({ playerPosition, gameState }: BossProps) {
       <group ref={effectsRef}>
         <pointLight ref={magicLightRef} color="white" intensity={0} distance={15} />
       </group>
+      
+      {/* Add the CSS animation for the boss name */}
+      <Html position={[0, 0, 0]}>
+        <style dangerouslySetInnerHTML={{ __html: `
+          @keyframes fadeInScale {
+            0% { opacity: 0; transform: scale(0); }
+            70% { opacity: 1; transform: scale(2.2); }
+            100% { transform: scale(2); }
+          }
+          
+          @keyframes damageAnim {
+            0% { transform: scale(1); opacity: 0; }
+            50% { transform: scale(1.5); opacity: 1; }
+            100% { transform: scale(1); opacity: 0; }
+          }
+        `}} />
+      </Html>
     </>
   );
 }

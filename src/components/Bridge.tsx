@@ -163,9 +163,9 @@ function Bridge({ gameState }: BridgeProps) {
     {
       title: "ARMOUR",
       cards: [
-        { position: [-2, 0.42, 0], label: "Steel", color: "#ff0000", texture: "/models/card-gold.png" },
+        { position: [-2, 0.42, 0], label: "Steel", color: "#ff0000", texture: "/models/card-steel.png" },
         { position: [0, 0.32, 0], label: "Knowledge", color: "#00ff00", texture: "/models/card-knowledge.png" },
-        { position: [2, 0.42, 0], label: "Gold", color: "#0000ff", texture: "/models/card-steel.png" }
+        { position: [2, 0.42, 0], label: "Gold", color: "#0000ff", texture: "/models/card-gold.png" }
       ]
     },
     {
