@@ -52,6 +52,14 @@ const Game = ({ gameState, setGameState, playMusic }: GameProps) => {
   // Create a ref to track if music has started
   const musicStartedRef = useRef(false);
 
+  // Create a ref to track current boss health to avoid state update delays
+  const currentBossHealthRef = useRef(gameState.bossHealth);
+  
+  // Update our local ref whenever gameState changes
+  useEffect(() => {
+    currentBossHealthRef.current = gameState.bossHealth;
+  }, [gameState.bossHealth]);
+
   // Expose gameState and setGameState to window for Victory component
   useEffect(() => {
     window.gameState = gameState;
@@ -237,29 +245,49 @@ const Game = ({ gameState, setGameState, playMusic }: GameProps) => {
     };
   }, [hasAllItems, gameState.magic, gameState.bossDefeated]);
   
-  // Effect to stop attack sounds when boss is defeated
+  // Effect to switch music when boss appears
   useEffect(() => {
-    if (gameState.bossHealth <= 0 && !gameState.bossDefeated) {
-      // Create a completely fresh state object to prevent race conditions
-      const updatedState = {
-        weapon: gameState.weapon,
-        armour: gameState.armour,
-        magic: gameState.magic,
-        position: { ...gameState.position },
-        stage: gameState.stage,
-        collectedBlocks: [...gameState.collectedBlocks],
-        isInvulnerable: gameState.isInvulnerable,
-        bossHealth: gameState.bossHealth,
-        bossDefeated: true
-      };
+    // Only run this once when hasAllItems becomes true
+    if (hasAllItems && !musicSwitchedRef.current && backgroundMusicRef.current && bossMusicRef.current) {
+      const bgMusic = backgroundMusicRef.current;
+      const bossMusic = bossMusicRef.current;
       
-      // Update the game state
-      setGameState(updatedState);
-      
-      // Also update window gameState
-      if (window.setGameState) {
-        window.setGameState(updatedState);
-      }
+      // Fade out background music
+      const fadeOutInterval = setInterval(() => {
+        if (bgMusic && bgMusic.volume > 0.05) {
+          bgMusic.volume -= 0.05;
+        } else {
+          clearInterval(fadeOutInterval);
+          if (bgMusic) {
+            bgMusic.pause();
+          }
+          
+          // Start boss music
+          bossMusic.play().catch(error => {
+            console.log("Boss music autoplay failed, will play on user interaction");
+          });
+          
+          // Fade in boss music
+          let bossVolume = 0;
+          const fadeInInterval = setInterval(() => {
+            if (bossVolume < 0.7) {
+              bossVolume += 0.05;
+              bossMusic.volume = bossVolume;
+            } else {
+              clearInterval(fadeInInterval);
+            }
+          }, 100);
+          
+          musicSwitchedRef.current = true;
+        }
+      }, 100);
+    }
+  }, [hasAllItems]);
+
+  // Effect to stop attack sounds and play victory music when boss is defeated
+  useEffect(() => {
+    if (gameState.bossDefeated) {
+      console.log("Boss defeated detected, stopping combat sounds and switching music");
       
       // Stop attack sound
       if (currentAttackSoundRef.current) {
@@ -328,46 +356,7 @@ const Game = ({ gameState, setGameState, playMusic }: GameProps) => {
         }, 100);
       }
     }
-  }, [gameState.bossHealth, gameState.bossDefeated]);
-  
-  // Effect to switch music when boss appears
-  useEffect(() => {
-    // Only run this once when hasAllItems becomes true
-    if (hasAllItems && !musicSwitchedRef.current && backgroundMusicRef.current && bossMusicRef.current) {
-      const bgMusic = backgroundMusicRef.current;
-      const bossMusic = bossMusicRef.current;
-      
-      // Fade out background music
-      const fadeOutInterval = setInterval(() => {
-        if (bgMusic && bgMusic.volume > 0.05) {
-          bgMusic.volume -= 0.05;
-        } else {
-          clearInterval(fadeOutInterval);
-          if (bgMusic) {
-            bgMusic.pause();
-          }
-          
-          // Start boss music
-          bossMusic.play().catch(error => {
-            console.log("Boss music autoplay failed, will play on user interaction");
-          });
-          
-          // Fade in boss music
-          let bossVolume = 0;
-          const fadeInInterval = setInterval(() => {
-            if (bossVolume < 0.7) {
-              bossVolume += 0.05;
-              bossMusic.volume = bossVolume;
-            } else {
-              clearInterval(fadeInInterval);
-            }
-          }, 100);
-          
-          musicSwitchedRef.current = true;
-        }
-      }, 100);
-    }
-  }, [hasAllItems]);
+  }, [gameState.bossDefeated]);
 
   const handleIntroComplete = () => {
     setShowIntro(false);
@@ -474,14 +463,64 @@ const Game = ({ gameState, setGameState, playMusic }: GameProps) => {
 
   // Function that will be called after user input/interaction
   const handlePlayMusic = useCallback(() => {
-    if (!musicStartedRef.current && backgroundMusicRef.current) {
+    if (!musicStartedRef.current) {
       console.log('Game: Starting background music after user interaction');
-      backgroundMusicRef.current.play().then(() => {
-        console.log('Background music started successfully');
-        musicStartedRef.current = true;
-      }).catch(error => {
-        console.error('Background music failed to play:', error);
-      });
+      
+      // Try to unlock all audio by creating a short silent sound
+      try {
+        // Create an audio context
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        
+        // Create a brief silent sound
+        const silentBuffer = audioContext.createBuffer(1, 1, 22050);
+        const source = audioContext.createBufferSource();
+        source.buffer = silentBuffer;
+        source.connect(audioContext.destination);
+        source.start(0);
+        
+        // Try to play short silent audio to unlock audio playback
+        const silentAudio = new Audio("data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABBwBtbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1t//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjU0AAAAAAAAAAAAAAAAJAAAAAAAAAAABAcFNb4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/7kGQAAAAAADUAAAAAACwAAAAAKAQAAAk4QkdAAAAnAAAABgcVNFQJAKiEMIMYwgxjCDGMIMYwgxjCDGMIMYwgxjCDGMIMYwgxjCDGMIMYwgxjCDGMIMYwgxjCDGMIMYwgxjCDGMIMYwgxjCDGEAAAQ4EHQIPBA6L0H3gPgQdF0XoPvAfAgcF74fQewIPBAcMHgfBAcAeBB0YPwfQfQfVrWtaywmm2oAAAAAAAAAAAAAAAp222gAAYYQQwwlCsDizq7u7u7u7u7u7u7u7u7u7u+7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7rWtaC21nmB0HwfB8HwfVrWtaH0fggOA+BA4IPg+CB0W5Dg+D4PggOCB4IHQeg9B8EDoQe+H0HwIHPA+g9B9B9B9B9B9B9B9B9BKta1rWta1rWta1rWta1rWtaKNa1rWta1rWiDWtaKNaINa1rWioNCDGMIQYxhBDGMIIYxhBDGMIIYxhBDGMIIYxhBDGMIIYxhBDGMIMYwgxjCD/+5JkEA/wAABpAAAACAAADSAAAAEAAAGkAAAAIAAANIAAAARGMIMYwghjCCGMYQQxjCCGMYQQxjCCGMYQQxjCCGMYQQxjCCGMYQQAAAAAP/////////////////////////////////////////////7/////////////////////////////////////////////////////////////////z////////////////////////////4=");
+        silentAudio.volume = 0.001;
+        silentAudio.play()
+          .then(() => console.log('Audio context unlocked'))
+          .catch(err => console.error('Failed to unlock audio context:', err));
+        
+        // Attempt to play all important audio elements one by one
+        // with minimal volume to warm up the audio system
+        if (backgroundMusicRef.current) {
+          backgroundMusicRef.current.volume = 0.001;
+          backgroundMusicRef.current.play()
+            .then(() => {
+              // Successfully started, now set real volume and restart
+              backgroundMusicRef.current!.pause();
+              backgroundMusicRef.current!.currentTime = 0;
+              backgroundMusicRef.current!.volume = 0.6;
+              backgroundMusicRef.current!.play()
+                .then(() => {
+                  console.log('Background music started successfully');
+                  musicStartedRef.current = true;
+                })
+                .catch(error => {
+                  console.error('Background music failed to play:', error);
+                });
+            })
+            .catch(error => {
+              console.error('Failed to warm up audio:', error);
+            });
+        }
+      } catch (e) {
+        console.error('Error while trying to unlock audio:', e);
+        
+        // Fallback direct attempt
+        if (backgroundMusicRef.current) {
+          backgroundMusicRef.current.play().then(() => {
+            console.log('Background music started with fallback method');
+            musicStartedRef.current = true;
+          }).catch(error => {
+            console.error('Background music failed to play with fallback:', error);
+          });
+        }
+      }
       
       // Also trigger parent playMusic for any additional logic
       playMusic();
@@ -558,9 +597,12 @@ const Game = ({ gameState, setGameState, playMusic }: GameProps) => {
           <Boss
             playerPosition={gameState.position}
             gameState={gameState}
-            bossHealth={gameState.bossHealth}
+            bossHealth={currentBossHealthRef.current}
             updateBossHealth={(newHealth: number) => {
-              console.log(`Game: Updating boss health to ${newHealth}`);
+              console.log(`Game: Updating boss health to ${newHealth} (previous: ${currentBossHealthRef.current})`);
+              
+              // Update our ref immediately
+              currentBossHealthRef.current = newHealth;
               
               // Create a completely fresh state object to prevent race conditions
               const updatedState = {
@@ -572,7 +614,7 @@ const Game = ({ gameState, setGameState, playMusic }: GameProps) => {
                 collectedBlocks: [...gameState.collectedBlocks],
                 isInvulnerable: gameState.isInvulnerable,
                 bossHealth: newHealth,
-                bossDefeated: gameState.bossDefeated || newHealth <= 0
+                bossDefeated: newHealth <= 0
               };
               
               // Update both local state and window state
@@ -589,7 +631,7 @@ const Game = ({ gameState, setGameState, playMusic }: GameProps) => {
       
       <UI
         gameState={gameState}
-        bossHealth={gameState.bossHealth}
+        bossHealth={currentBossHealthRef.current}
         bossDefeated={gameState.bossDefeated}
         onMobileMove={handleMobileMove}
       />

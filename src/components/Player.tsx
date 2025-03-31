@@ -70,6 +70,26 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
   const mobileVelocity = useRef(new Vector2(0, 0));
   const mobileInputActive = useRef(false);
 
+  // Function to unlock all audio after user interaction
+  const unlockAudioForAll = useCallback(() => {
+    // Create a silent audio context and play it to unlock audio on iOS
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const silentBuffer = audioContext.createBuffer(1, 1, 22050);
+    const source = audioContext.createBufferSource();
+    source.buffer = silentBuffer;
+    source.connect(audioContext.destination);
+    source.start(0);
+    
+    // Try to force audio unlock by playing a silent sound
+    const silence = new Audio("data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABBwBtbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1t//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjU0AAAAAAAAAAAAAAAAJAAAAAAAAAAABAcFNb4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/7kGQAAAAAADUAAAAAACwAAAAAKAQAAAk4QkdAAAAnAAAABgcVNFQJAKiEMIMYwgxjCDGMIMYwgxjCDGMIMYwgxjCDGMIMYwgxjCDGMIMYwgxjCDGMIMYwgxjCDGMIMYwgxjCDGMIMYwgxjCDGEAAAQ4EHQIPBA6L0H3gPgQdF0XoPvAfAgcF74fQewIPBAcMHgfBAcAeBB0YPwfQfQfVrWtaywmm2oAAAAAAAAAAAAAAAp222gAAYYQQwwlCsDizq7u7u7u7u7u7u7u7u7u7u+7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7rWtaC21nmB0HwfB8HwfVrWtaH0fggOA+BA4IPg+CB0W5Dg+D4PggOCB4IHQeg9B8EDoQe+H0HwIHPA+g9B9B9B9B9B9B9B9B9BKta1rWta1rWta1rWta1rWtaKNa1rWta1rWiDWtaKNaINa1rWioNCDGMIQYxhBDGMIIYxhBDGMIIYxhBDGMIIYxhBDGMIIYxhBDGMIMYwgxjCD/+5JkEA/wAABpAAAACAAADSAAAAEAAAGkAAAAIAAANIAAAARGMIMYwghjCCGMYQQxjCCGMYQQxjCCGMYQQxjCCGMYQQxjCCGMYQQAAAAAP/////////////////////////////////////////////7/////////////////////////////////////////////////////////////////z////////////////////////////4=");
+    silence.volume = 0.001;
+    silence.play().then(() => {
+      console.log('Audio unlocked on mobile device');
+    }).catch(e => {
+      console.log('Failed to unlock audio:', e);
+    });
+  }, []);
+
   // Expose methods to parent component
   useImperativeHandle(ref, () => ({
     handleMobileMove: (x: number, y: number) => {
@@ -80,6 +100,9 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
         console.log('Player ignoring tiny mobile input');
         return;
       }
+      
+      // First mobile input - try to unlock audio
+      unlockAudioForAll();
       
       // Set active flag and update velocity with direct input values
       // FLIP X AXIS by negating the x value to correct left/right movement
@@ -282,6 +305,10 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
       
       // Play music on first movement if not already started
       if (!musicStartedRef.current && ['w', 'a', 's', 'd'].includes(e.key.toLowerCase())) {
+        // Try to unlock audio on first keyboard interaction
+        unlockAudioForAll();
+        
+        // Start background music
         playMusic();
         musicStartedRef.current = true;
       }

@@ -24,12 +24,17 @@ function Boss({ playerPosition, gameState, bossHealth, updateBossHealth }: BossP
   const damageRef = useRef(0);
   const bossAudioRef = useRef<HTMLAudioElement | null>(null);
   
-  // Create a ref to track the latest health value - initialize with props
+  // Track health as local state instead of just a ref
+  const [localBossHealth, setLocalBossHealth] = useState(bossHealth);
+  
+  // Also keep ref for non-reactive contexts
   const bossHealthRef = useRef(bossHealth);
   
-  // Update our health ref whenever props change
+  // Update our local state and ref whenever props change
   useEffect(() => {
+    console.log(`Boss props health changed: ${bossHealth}, local health: ${localBossHealth}`);
     bossHealthRef.current = bossHealth;
+    setLocalBossHealth(bossHealth);
   }, [bossHealth]);
   
   // Effect particles for different magic types
@@ -50,8 +55,8 @@ function Boss({ playerPosition, gameState, bossHealth, updateBossHealth }: BossP
   // Combat system
   const combatState = useRef({
     lastAttackTime: 0,
-    attackInterval: 1.5, // Attack every 1.5 seconds
-    baseDamage: 5
+    attackInterval: 1.0, // Reduced from 1.5 to 1.0 for more frequent attacks
+    baseDamage: 10 // Increased from 5 to 10 for faster damage
   });
   
   // Dynamic movement tracking
@@ -91,9 +96,29 @@ function Boss({ playerPosition, gameState, bossHealth, updateBossHealth }: BossP
   useEffect(() => {
     // Start playing when boss has finished descending
     if (!isDescending && !isDying && !isDefeated && bossAudioRef.current) {
-      bossAudioRef.current.play().catch(err => {
-        console.log('Failed to play boss audio:', err);
-      });
+      // Try to play with a small delay after user interaction
+      setTimeout(() => {
+        if (bossAudioRef.current) {
+          // Set volume very low at first to prevent loud start
+          bossAudioRef.current.volume = 0.05;
+          bossAudioRef.current.play()
+            .then(() => {
+              console.log('Boss audio started successfully');
+              // Gradually increase volume
+              const fadeIn = setInterval(() => {
+                if (bossAudioRef.current && bossAudioRef.current.volume < 0.5) {
+                  bossAudioRef.current.volume += 0.05;
+                } else {
+                  clearInterval(fadeIn);
+                }
+              }, 200);
+            })
+            .catch(err => {
+              console.log('Failed to play boss audio - this is normal if user has not interacted yet:', err);
+              // We'll let background music play first, boss audio will try again later
+            });
+        }
+      }, 500);
     }
     
     // Stop audio when boss is defeated
@@ -371,12 +396,16 @@ function Boss({ playerPosition, gameState, bossHealth, updateBossHealth }: BossP
       if (currentTime - combatState.current.lastAttackTime > combatState.current.attackInterval) {
         // Time for a new attack
         const damage = calculateDamage();
-        // Use our local ref for the current health value - this is the key fix
-        const newHealth = Math.max(0, bossHealthRef.current - damage);
         
-        console.log(`Boss taking damage: ${damage}, Health: ${bossHealthRef.current} -> ${newHealth}`);
+        // Use local health state to ensure consistent updates
+        const newHealth = Math.max(0, localBossHealth - damage);
         
-        // Apply damage by updating health
+        console.log(`Boss taking damage: ${damage}, Current Health: ${localBossHealth} -> ${newHealth}`);
+        
+        // Update our local state immediately
+        setLocalBossHealth(newHealth);
+        
+        // Apply damage by updating parent health
         updateBossHealth(newHealth);
         
         // Check if the boss is dying - need to check exactly zero to avoid floating point issues

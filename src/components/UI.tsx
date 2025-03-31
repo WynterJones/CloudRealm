@@ -1,5 +1,5 @@
 import { GameState } from '../types/game';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 interface UIProps {
   gameState: GameState;
@@ -26,6 +26,9 @@ function UI({ gameState, bossHealth, bossDefeated = false, onMobileMove }: UIPro
   const hasAllItems = gameState.weapon !== null && gameState.armour !== null && gameState.magic !== null;
   const [joystickPosition, setJoystickPosition] = useState({ x: 0, y: 0 });
   
+  // Preload hit sound to improve performance and reduce errors
+  const hitSoundRef = useRef<HTMLAudioElement | null>(null);
+  
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
@@ -35,6 +38,42 @@ function UI({ gameState, bossHealth, bossDefeated = false, onMobileMove }: UIPro
     window.addEventListener('resize', checkMobile);
     
     return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Initialize hit sound
+  useEffect(() => {
+    // Create hit sound element
+    hitSoundRef.current = new Audio('/models/hit.mp3');
+    hitSoundRef.current.volume = 0.3;
+    
+    // Cleanup
+    return () => {
+      if (hitSoundRef.current) {
+        hitSoundRef.current.pause();
+        hitSoundRef.current.src = '';
+        hitSoundRef.current = null;
+      }
+    };
+  }, []);
+  
+  // Safely play hit sound
+  const playHitSound = useCallback(() => {
+    if (hitSoundRef.current) {
+      try {
+        // Reset and play
+        hitSoundRef.current.currentTime = 0;
+        const playPromise = hitSoundRef.current.play();
+        
+        // Handle the promise to avoid uncaught errors
+        if (playPromise !== undefined) {
+          playPromise.catch(err => {
+            console.log('Hit sound playback suppressed - this is expected before user interaction');
+          });
+        }
+      } catch (e) {
+        // Ignore errors - audio will play once user interacts
+      }
+    }
   }, []);
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -165,10 +204,8 @@ function UI({ gameState, bossHealth, bossDefeated = false, onMobileMove }: UIPro
         return Math.max(prev - damage, minPlayerHealth);
       });
       
-      // Play hit sound
-      const hitSound = new Audio('/models/hit.mp3');
-      hitSound.volume = 0.3;
-      hitSound.play().catch(err => console.log('Failed to play hit sound'));
+      // Play hit sound using the safe method
+      playHitSound();
       
       lastHitTime.current = now;
     };
