@@ -16,25 +16,25 @@ const Victory = ({ onComplete, onRestart }: VictoryProps) => {
   const [visible, setVisible] = useState(true);
   
   // Add debug logging on mount
-  useEffect(() => {
-    console.log("Victory component useEffect EXECUTED - Component is mounted!");
+  // useEffect(() => {
+  //   console.log("Victory component useEffect EXECUTED - Component is mounted!");
     
-    // Auto-hide after 6 seconds
-    const hideTimer = setTimeout(() => {
-      console.log("Auto-hiding Victory screen after 6 seconds");
-      setFadeOut(true);
+  //   // Auto-hide after 6 seconds
+  //   const hideTimer = setTimeout(() => {
+  //     console.log("Auto-hiding Victory screen after 6 seconds");
+  //     setFadeOut(true);
       
-      // After fadeout animation completes, remove from DOM
-      setTimeout(() => {
-        setVisible(false);
-      }, 1000);
-    }, 12000);
+  //     // After fadeout animation completes, remove from DOM
+  //     setTimeout(() => {
+  //       setVisible(false);
+  //     }, 1000);
+  //   }, 12000);
     
-    return () => {
-      console.log("Victory component UNMOUNTED");
-      clearTimeout(hideTimer);
-    };
-  }, []);
+  //   return () => {
+  //     console.log("Victory component UNMOUNTED");
+  //     clearTimeout(hideTimer);
+  //   };
+  // }, []);
   
   // Handle restart on space key press
   const handleKeyPress = useCallback((e: KeyboardEvent) => {
