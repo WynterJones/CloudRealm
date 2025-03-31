@@ -431,7 +431,13 @@ const Game = forwardRef<PlayerHandle, GameProps>(
     const handleMobileMove = (x: number, y: number) => {
       // This will be handled by the Player component
       if (ref && 'current' in ref && ref.current) {
-        ref.current.handleMobileMove(x, y);
+        if (x === 0 && y === 0) {
+          // When touch is released, clear the mobile input
+          ref.current.clearMobileInput();
+        } else {
+          // Regular move
+          ref.current.handleMobileMove(x, y);
+        }
       }
     };
 

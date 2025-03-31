@@ -24,6 +24,7 @@ function UI({ gameState, bossHealth, bossDefeated = false, onMobileMove }: UIPro
   const lastHitTime = useRef(0);
   const minPlayerHealth = 30; // Player health won't drop below this
   const hasAllItems = gameState.weapon !== null && gameState.armour !== null && gameState.magic !== null;
+  const [joystickPosition, setJoystickPosition] = useState({ x: 0, y: 0 });
   
   useEffect(() => {
     const checkMobile = () => {
@@ -44,18 +45,36 @@ function UI({ gameState, bossHealth, bossDefeated = false, onMobileMove }: UIPro
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
     
+    // Allow starting the touch from anywhere within the joystick element
+    setTouchActive(true);
+    
     const deltaX = touch.clientX - centerX;
     const deltaY = touch.clientY - centerY;
     
     const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
     const maxDistance = rect.width / 2;
     
-    if (distance <= maxDistance) {
-      setTouchActive(true);
-      const normalizedX = deltaX / maxDistance;
-      const normalizedY = deltaY / maxDistance;
-      onMobileMove?.(normalizedX, -normalizedY);
+    // Normalize the movement vector
+    let normalizedX = deltaX / maxDistance;
+    let normalizedY = deltaY / maxDistance;
+    
+    // Clamp the values to the joystick radius
+    if (distance > maxDistance) {
+      normalizedX = (deltaX / distance) * 1.0;
+      normalizedY = (deltaY / distance) * 1.0;
     }
+    
+    // Update visual joystick position
+    setJoystickPosition({ 
+      x: normalizedX * maxDistance * 0.5, 
+      y: normalizedY * maxDistance * 0.5 
+    });
+    
+    // Send the movement values
+    onMobileMove?.(normalizedX, -normalizedY);
+    
+    // Prevent default to avoid scrolling or other touch behaviors
+    e.preventDefault();
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -72,17 +91,35 @@ function UI({ gameState, bossHealth, bossDefeated = false, onMobileMove }: UIPro
     const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
     const maxDistance = rect.width / 2;
     
-    if (distance <= maxDistance) {
-      const normalizedX = deltaX / maxDistance;
-      const normalizedY = deltaY / maxDistance;
-      onMobileMove?.(normalizedX, -normalizedY);
+    // Normalize the movement vector
+    let normalizedX = deltaX / maxDistance;
+    let normalizedY = deltaY / maxDistance;
+    
+    // Clamp the values to unit circle if outside the joystick radius
+    if (distance > maxDistance) {
+      normalizedX = (deltaX / distance) * 1.0;
+      normalizedY = (deltaY / distance) * 1.0;
     }
+    
+    // Update visual joystick position
+    setJoystickPosition({ 
+      x: normalizedX * maxDistance * 0.5, 
+      y: normalizedY * maxDistance * 0.5 
+    });
+    
+    // Send the movement values
+    onMobileMove?.(normalizedX, -normalizedY);
+    
+    // Prevent default to avoid scrolling
+    e.preventDefault();
   };
 
-  const handleTouchEnd = () => {
+  const handleTouchEnd = (e: React.TouchEvent) => {
     if (!isMobile) return;
     setTouchActive(false);
+    setJoystickPosition({ x: 0, y: 0 });
     onMobileMove?.(0, 0);
+    e.preventDefault();
   };
 
   // Show boss name with animation when all items are collected
@@ -150,13 +187,13 @@ function UI({ gameState, bossHealth, bossDefeated = false, onMobileMove }: UIPro
       {isMobile && (
         <div
           ref={joystickRef}
-          className="fixed bottom-8 left-8 w-24 h-24 rounded-full"
+          className="fixed bottom-16 right-16 w-32 h-32 rounded-full"
           style={{
             zIndex: 10001,
-            background: 'rgba(255, 255, 255, 0.15)',
-            boxShadow: '0 0 20px rgba(255, 255, 255, 0.1)',
+            background: 'rgba(255, 255, 255, 0.2)',
+            boxShadow: '0 0 20px rgba(255, 255, 255, 0.2)',
             backdropFilter: 'blur(4px)',
-            border: '2px solid rgba(255, 255, 255, 0.2)',
+            border: '2px solid rgba(255, 255, 255, 0.3)',
             pointerEvents: 'auto',
             touchAction: 'none'
           }}
@@ -165,15 +202,17 @@ function UI({ gameState, bossHealth, bossDefeated = false, onMobileMove }: UIPro
           onTouchEnd={handleTouchEnd}
         >
           <div
-            className="absolute w-8 h-8 rounded-full"
+            className="absolute rounded-full"
             style={{
+              width: '40%',
+              height: '40%',
               top: '50%',
               left: '50%',
-              transform: 'translate(-50%, -50%)',
-              transition: touchActive ? 'none' : 'all 0.2s ease-out',
-              background: 'rgba(255, 255, 255, 0.4)',
-              boxShadow: '0 0 10px rgba(255, 255, 255, 0.3)',
-              pointerEvents: 'none'
+              transform: `translate(calc(-50% + ${joystickPosition.x}px), calc(-50% + ${joystickPosition.y}px))`,
+              background: 'rgba(255, 255, 255, 0.6)',
+              boxShadow: '0 0 10px rgba(255, 255, 255, 0.4)',
+              pointerEvents: 'none',
+              transition: touchActive ? 'none' : 'transform 0.2s ease-out'
             }}
           />
         </div>
