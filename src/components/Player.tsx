@@ -5,7 +5,6 @@ import { PerspectiveCamera, useGLTF, Text } from '@react-three/drei';
 import { GameState, WeaponType, ArmourType, MagicType } from '../types/game';
 import WeaponOrbit from './WeaponOrbit';
 import ArmourOrbit from './ArmourOrbit';
-import MagicOrbit from './MagicOrbit';
 
 interface PlayerProps {
   gameState: GameState;
@@ -341,13 +340,6 @@ function Player({ gameState, setGameState }: PlayerProps) {
           {gameState.armour && (
             <ArmourOrbit 
               armourType={gameState.armour} 
-            />
-          )}
-          
-          {/* Add orbiting magic if one is selected */}
-          {gameState.magic && (
-            <MagicOrbit 
-              magicType={gameState.magic} 
             />
           )}
         </group>
