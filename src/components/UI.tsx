@@ -284,6 +284,30 @@ function UI({ gameState, bossHealth, bossDefeated = false, onMobileMove }: UIPro
         </div>
       )}
       
+      {/* Wynter.ai logo with link */}
+      <a 
+        href="https://www.wynter.ai" 
+        target="_blank" 
+        rel="noopener noreferrer" 
+        style={{ 
+          position: 'fixed', 
+          bottom: '10px', 
+          right: '10px', 
+          width: '200px', 
+          zIndex: 10000,
+          pointerEvents: 'auto'
+        }}
+      >
+        <img 
+          src="/models/wynter-logo.png" 
+          alt="Wynter.ai" 
+          style={{ 
+            width: '100%', 
+            height: 'auto' 
+          }} 
+        />
+      </a>
+      
       {/* Rest of UI elements */}
       <div className="game-ui">
         <div className="p-4 flex flex-col h-full">
