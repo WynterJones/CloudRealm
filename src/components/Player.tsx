@@ -73,9 +73,39 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
   // Expose methods to parent component
   useImperativeHandle(ref, () => ({
     handleMobileMove: (x: number, y: number) => {
-      console.log(`Player received mobile input: (${x}, ${y})`);
-      mobileVelocity.current.set(x, y);
+      console.log(`PLAYER handleMobileMove CALLED WITH: (${x}, ${y})`);
+      
+      // Make sure values are above threshold to prevent very small unintended movements
+      if (Math.abs(x) < 0.01 && Math.abs(y) < 0.01) {
+        console.log('Player ignoring tiny mobile input');
+        return;
+      }
+      
+      // Set active flag and update velocity
       mobileInputActive.current = true;
+      console.log(`Setting mobileInputActive to TRUE`);
+      
+      // DIRECT APPROACH - Modify position immediately
+      // Scale inputs for better movement speed
+      const scaledX = -x * 0.5; // Invert X for correct left/right
+      const scaledY = y * 0.5;  
+      
+      // Calculate new position
+      const newX = Math.max(Math.min(positionRef.current.x + scaledX, 1.9), -1.9);
+      const newZ = Math.max(Math.min(positionRef.current.z + scaledY, 300), -20);
+      
+      console.log(`DIRECT MOVEMENT: Current position (${positionRef.current.x}, ${positionRef.current.z})`);
+      console.log(`DIRECT MOVEMENT: Setting to (${newX}, ${newZ})`);
+      
+      // Update position state
+      updatePosition(newX, newZ);
+      
+      // Force immediate mesh update
+      if (playerRef.current) {
+        playerRef.current.position.x = newX;
+        playerRef.current.position.z = newZ;
+        console.log(`Directly updated mesh position to (${newX}, ${newZ})`);
+      }
       
       if (!musicStartedRef.current) {
         playMusic();
@@ -83,9 +113,10 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
       }
     },
     clearMobileInput: () => {
-      console.log('Player clearing mobile input');
-      mobileVelocity.current.set(0, 0);
+      console.log('PLAYER clearMobileInput CALLED');
       mobileInputActive.current = false;
+      console.log(`Setting mobileInputActive to FALSE`);
+      mobileVelocity.current.set(0, 0);
     }
   }));
 
@@ -193,7 +224,9 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
       stage: stageRef.current,
       position: positionRef.current,
       collectedBlocks: [...gameState.collectedBlocks, { x: cardX, z: cardZ }],
-      isInvulnerable: gameState.isInvulnerable
+      isInvulnerable: gameState.isInvulnerable,
+      bossHealth: gameState.bossHealth,
+      bossDefeated: gameState.bossDefeated
     };
     
     setGameState(newState);
@@ -231,7 +264,9 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
       stage: stageRef.current,
       position: { x: newX, z: newZ },
       collectedBlocks: gameState.collectedBlocks,
-      isInvulnerable: gameState.isInvulnerable
+      isInvulnerable: gameState.isInvulnerable,
+      bossHealth: gameState.bossHealth,
+      bossDefeated: gameState.bossDefeated
     });
   }, [gameState, setGameState]);
 
@@ -268,21 +303,37 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
       if (keys.has('w')) targetVelocity.current.y = speed;
       if (keys.has('s')) targetVelocity.current.y = -speed;
       
-      // Handle mobile input
+      // Handle mobile input - prioritize mobile input over keyboard
       if (mobileInputActive.current) {
-        console.log(`Using mobile velocity: (${mobileVelocity.current.x}, ${mobileVelocity.current.y})`);
-        targetVelocity.current.x = mobileVelocity.current.x * speed;
-        targetVelocity.current.y = mobileVelocity.current.y * speed;
+        console.log(`Mobile active check: active=${mobileInputActive.current}, velocity length=${mobileVelocity.current.length()}`);
+        
+        if (mobileVelocity.current.length() > 0.05) {
+          console.log(`Using mobile velocity: (${mobileVelocity.current.x}, ${mobileVelocity.current.y})`);
+          // Replace keyboard values completely when using mobile
+          targetVelocity.current.copy(mobileVelocity.current);
+          
+          // Scale mobile movement appropriately - use direct values rather than normalizing
+          // This allows for variable speed with joystick distance
+          targetVelocity.current.multiplyScalar(speed * 3.0); // Triple speed for very responsive mobile feel
+          console.log(`Scaled target velocity: (${targetVelocity.current.x}, ${targetVelocity.current.y})`);
+        }
+      }
+      else {
+        console.log('Mobile inactive');
+        // Normalize diagonal movement for keyboard
+        if (targetVelocity.current.length() > 0) {
+          targetVelocity.current.normalize().multiplyScalar(speed);
+        }
       }
       
-      // Normalize diagonal movement
+      // Log final target velocity
       if (targetVelocity.current.length() > 0) {
-        targetVelocity.current.normalize().multiplyScalar(speed);
         console.log(`Final target velocity: (${targetVelocity.current.x}, ${targetVelocity.current.y})`);
       }
       
-      // Apply acceleration/deceleration
-      const accelerationFactor = (keys.size || mobileInputActive.current) ? acceleration : deceleration;
+      // Apply acceleration/deceleration - use higher acceleration for mobile
+      const accelerationFactor = (keys.size || mobileInputActive.current) ? 
+        (mobileInputActive.current ? 0.5 : acceleration) : deceleration;
       velocity.current.lerp(targetVelocity.current, accelerationFactor);
       
       // Calculate new position
@@ -290,7 +341,7 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
       const newZ = Math.max(Math.min(positionRef.current.z + velocity.current.y, 300), -20);
       
       // Log position changes when using mobile input
-      if (mobileInputActive.current) {
+      if (mobileInputActive.current && velocity.current.length() > 0.01) {
         console.log(`New position: (${newX}, ${newZ})`);
       }
       
@@ -407,7 +458,9 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
           position: { x: 0, z: 0 },
           stage: 0,
           collectedBlocks: [],
-          isInvulnerable: false
+          isInvulnerable: false,
+          bossHealth: gameState.bossHealth,
+          bossDefeated: gameState.bossDefeated
         });
       }
     }

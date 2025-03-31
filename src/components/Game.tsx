@@ -429,15 +429,20 @@ const Game = forwardRef<PlayerHandle, GameProps>(
     };
 
     const handleMobileMove = (x: number, y: number) => {
+      console.log(`GAME FORWARDING MOBILE INPUT WITH VALUES: (${x}, ${y})`);
       // This will be handled by the Player component
       if (ref && 'current' in ref && ref.current) {
         if (x === 0 && y === 0) {
           // When touch is released, clear the mobile input
+          console.log('GAME CALLING clearMobileInput');
           ref.current.clearMobileInput();
         } else {
-          // Regular move
+          // Regular move - ensure the values are properly passed
+          console.log('GAME CALLING handleMobileMove');
           ref.current.handleMobileMove(x, y);
         }
+      } else {
+        console.warn('Player ref not available for mobile input');
       }
     };
 

@@ -37,104 +37,85 @@ function UI({ gameState, bossHealth, bossDefeated = false, onMobileMove }: UIPro
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  useEffect(() => {
-    // Set up non-passive touch event listeners directly if joystick is available
-    if (isMobile && joystickRef.current) {
-      const joystickElement = joystickRef.current;
-      
-      const handleRawTouchStart = (e: TouchEvent) => {
-        if (!joystickRef.current) return;
-        
-        const touch = e.touches[0];
-        const rect = joystickRef.current.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-        
-        setTouchActive(true);
-        
-        const deltaX = touch.clientX - centerX;
-        const deltaY = touch.clientY - centerY;
-        
-        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-        const maxDistance = rect.width / 2;
-        
-        let normalizedX = deltaX / maxDistance;
-        let normalizedY = deltaY / maxDistance;
-        
-        if (distance > maxDistance) {
-          normalizedX = (deltaX / distance) * 1.0;
-          normalizedY = (deltaY / distance) * 1.0;
-        }
-        
-        setJoystickPosition({ 
-          x: normalizedX * maxDistance * 0.5, 
-          y: normalizedY * maxDistance * 0.5 
-        });
-        
-        console.log(`Direct Touch Start: (${normalizedX}, ${-normalizedY})`);
-        onMobileMove?.(normalizedX, -normalizedY);
-        
-        // For direct DOM events, we can use preventDefault safely
-        e.preventDefault();
-      };
-      
-      const handleRawTouchMove = (e: TouchEvent) => {
-        if (!touchActive || !joystickRef.current) return;
-        
-        const touch = e.touches[0];
-        const rect = joystickRef.current.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-        
-        const deltaX = touch.clientX - centerX;
-        const deltaY = touch.clientY - centerY;
-        
-        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-        const maxDistance = rect.width / 2;
-        
-        let normalizedX = deltaX / maxDistance;
-        let normalizedY = deltaY / maxDistance;
-        
-        if (distance > maxDistance) {
-          normalizedX = (deltaX / distance) * 1.0;
-          normalizedY = (deltaY / distance) * 1.0;
-        }
-        
-        setJoystickPosition({ 
-          x: normalizedX * maxDistance * 0.5, 
-          y: normalizedY * maxDistance * 0.5 
-        });
-        
-        console.log(`Direct Touch Move: (${normalizedX}, ${-normalizedY})`);
-        onMobileMove?.(normalizedX, -normalizedY);
-        
-        // For direct DOM events, we can use preventDefault safely
-        e.preventDefault();
-      };
-      
-      const handleRawTouchEnd = (e: TouchEvent) => {
-        setTouchActive(false);
-        setJoystickPosition({ x: 0, y: 0 });
-        console.log('Direct Touch End');
-        onMobileMove?.(0, 0);
-        
-        // For direct DOM events, we can use preventDefault safely
-        e.preventDefault();
-      };
-      
-      // Add event listeners with the { passive: false } option
-      joystickElement.addEventListener('touchstart', handleRawTouchStart, { passive: false });
-      joystickElement.addEventListener('touchmove', handleRawTouchMove, { passive: false });
-      joystickElement.addEventListener('touchend', handleRawTouchEnd, { passive: false });
-      
-      return () => {
-        // Remove event listeners on cleanup
-        joystickElement.removeEventListener('touchstart', handleRawTouchStart);
-        joystickElement.removeEventListener('touchmove', handleRawTouchMove);
-        joystickElement.removeEventListener('touchend', handleRawTouchEnd);
-      };
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!isMobile || !joystickRef.current) return;
+    
+    console.log("UI TOUCH START");
+    
+    const touch = e.touches[0];
+    const rect = joystickRef.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    
+    setTouchActive(true);
+    
+    const deltaX = touch.clientX - centerX;
+    const deltaY = touch.clientY - centerY;
+    
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    const maxDistance = rect.width / 2;
+    
+    let normalizedX = deltaX / maxDistance;
+    let normalizedY = deltaY / maxDistance;
+    
+    if (distance > maxDistance) {
+      normalizedX = (deltaX / distance) * 1.0;
+      normalizedY = (deltaY / distance) * 1.0;
     }
-  }, [isMobile, touchActive, onMobileMove]);
+    
+    setJoystickPosition({ 
+      x: normalizedX * maxDistance * 0.5, 
+      y: normalizedY * maxDistance * 0.5 
+    });
+    
+    console.log(`UI sending movement: (${normalizedX}, ${-normalizedY})`);
+    onMobileMove?.(normalizedX, -normalizedY);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isMobile || !touchActive || !joystickRef.current) return;
+    
+    console.log("UI TOUCH MOVE");
+    
+    const touch = e.touches[0];
+    const rect = joystickRef.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    
+    const deltaX = touch.clientX - centerX;
+    const deltaY = touch.clientY - centerY;
+    
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    const maxDistance = rect.width / 2;
+    
+    let normalizedX = deltaX / maxDistance;
+    let normalizedY = deltaY / maxDistance;
+    
+    if (distance > maxDistance) {
+      normalizedX = (deltaX / distance) * 1.0;
+      normalizedY = (deltaY / distance) * 1.0;
+    }
+    
+    setJoystickPosition({ 
+      x: normalizedX * maxDistance * 0.5, 
+      y: normalizedY * maxDistance * 0.5 
+    });
+    
+    console.log(`UI sending movement: (${normalizedX}, ${-normalizedY})`);
+    onMobileMove?.(normalizedX, -normalizedY);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!isMobile) return;
+    
+    console.log("UI TOUCH END");
+    
+    setTouchActive(false);
+    setJoystickPosition({ x: 0, y: 0 });
+    
+    console.log(`UI sending movement: (0, 0)`);
+    onMobileMove?.(0, 0);
+  };
 
   // Show boss name with animation when all items are collected
   useEffect(() => {
@@ -204,13 +185,14 @@ function UI({ gameState, bossHealth, bossDefeated = false, onMobileMove }: UIPro
           className="fixed bottom-16 right-16 w-40 h-40 rounded-full"
           style={{
             zIndex: 10001,
-            background: 'rgba(255, 255, 255, 0.2)',
-            boxShadow: '0 0 20px rgba(255, 255, 255, 0.2)',
-            backdropFilter: 'blur(4px)',
-            border: '2px solid rgba(255, 255, 255, 0.3)',
-            pointerEvents: 'auto',
-            touchAction: 'none'
+            background: 'rgba(255, 255, 255, 0.3)',
+            boxShadow: '0 0 20px rgba(255, 255, 255, 0.3)',
+            border: '3px solid rgba(255, 255, 255, 0.4)',
+            pointerEvents: 'auto'
           }}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
         >
           <div
             className="absolute rounded-full"
@@ -220,27 +202,29 @@ function UI({ gameState, bossHealth, bossDefeated = false, onMobileMove }: UIPro
               top: '50%',
               left: '50%',
               transform: `translate(calc(-50% + ${joystickPosition.x}px), calc(-50% + ${joystickPosition.y}px))`,
-              background: 'rgba(255, 255, 255, 0.6)',
-              boxShadow: '0 0 10px rgba(255, 255, 255, 0.4)',
+              background: touchActive ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.7)',
+              boxShadow: '0 0 10px rgba(255, 255, 255, 0.5)',
               pointerEvents: 'none',
               transition: touchActive ? 'none' : 'transform 0.2s ease-out'
             }}
           />
           {/* Debug value display */}
-          {touchActive && (
-            <div style={{ 
-              position: 'absolute', 
-              top: '-30px', 
-              left: 0, 
-              width: '100%', 
-              textAlign: 'center', 
-              color: 'white',
-              fontSize: '12px',
-              pointerEvents: 'none'
-            }}>
-              {`X: ${joystickPosition.x.toFixed(2)}, Y: ${joystickPosition.y.toFixed(2)}`}
-            </div>
-          )}
+          <div style={{ 
+            position: 'absolute', 
+            top: '-30px', 
+            left: 0, 
+            width: '100%', 
+            textAlign: 'center', 
+            color: 'white',
+            fontSize: '12px',
+            textShadow: '0 0 3px black',
+            pointerEvents: 'none'
+          }}>
+            {touchActive ? 
+              `X: ${joystickPosition.x.toFixed(1)}, Y: ${joystickPosition.y.toFixed(1)}` :
+              'Touch to move'
+            }
+          </div>
         </div>
       )}
       
