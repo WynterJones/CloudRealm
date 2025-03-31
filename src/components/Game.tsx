@@ -31,6 +31,7 @@ function Game() {
   // Refs for music control
   const backgroundMusicRef = useRef<HTMLAudioElement | null>(null);
   const bossMusicRef = useRef<HTMLAudioElement | null>(null);
+  const endMusicRef = useRef<HTMLAudioElement | null>(null);
   const musicSwitchedRef = useRef(false);
   
   // Refs for weapon attack sounds
@@ -55,6 +56,11 @@ function Game() {
     bossMusicRef.current = new Audio('/models/boss.mp3');
     bossMusicRef.current.loop = true;
     bossMusicRef.current.volume = 0.7;
+    
+    // Create victory music
+    endMusicRef.current = new Audio('/models/end.mp3');
+    endMusicRef.current.loop = true;
+    endMusicRef.current.volume = 0.7;
     
     // Create audio elements for weapon attack sounds
     swordAttackRef.current = new Audio('/models/attack-sword.mp3');
@@ -92,6 +98,11 @@ function Game() {
       if (bossMusicRef.current) {
         bossMusicRef.current.pause();
         bossMusicRef.current.src = '';
+      }
+      
+      if (endMusicRef.current) {
+        endMusicRef.current.pause();
+        endMusicRef.current.src = '';
       }
       
       // Stop and clean up attack sounds
@@ -244,6 +255,41 @@ function Game() {
           }
         }, 100);
       }
+      
+      // Switch from boss music to end music
+      if (bossMusicRef.current && endMusicRef.current) {
+        // Fade out boss music
+        const fadeBossMusicInterval = setInterval(() => {
+          if (bossMusicRef.current && bossMusicRef.current.volume > 0.05) {
+            bossMusicRef.current.volume -= 0.05;
+          } else {
+            clearInterval(fadeBossMusicInterval);
+            if (bossMusicRef.current) {
+              bossMusicRef.current.pause();
+            }
+            
+            if (endMusicRef.current) {
+              // Start end music with fade in
+              endMusicRef.current.currentTime = 0;
+              endMusicRef.current.volume = 0.1;
+              endMusicRef.current.play().catch(error => {
+                console.log("End music autoplay failed, will play on user interaction");
+              });
+              
+              // Fade in end music
+              let endVolume = 0.1;
+              const fadeInInterval = setInterval(() => {
+                if (endMusicRef.current && endVolume < 0.7) {
+                  endVolume += 0.05;
+                  endMusicRef.current.volume = endVolume;
+                } else {
+                  clearInterval(fadeInInterval);
+                }
+              }, 100);
+            }
+          }
+        }, 100);
+      }
     }
   }, [bossHealth, bossDefeated]);
   
@@ -288,7 +334,9 @@ function Game() {
 
   // Function to play music
   const playMusic = () => {
-    if (hasAllItems && bossMusicRef.current) {
+    if (bossDefeated && endMusicRef.current) {
+      endMusicRef.current.play();
+    } else if (hasAllItems && bossMusicRef.current) {
       bossMusicRef.current.play();
     } else if (backgroundMusicRef.current) {
       backgroundMusicRef.current.play();
@@ -305,6 +353,7 @@ function Game() {
   };
 
   const handleRestartGame = () => {
+    // Reset game state
     setGameState({
       weapon: null,
       armour: null,
@@ -316,6 +365,29 @@ function Game() {
     setBossHealth(100);
     setBossDefeated(false);
     setShowIntro(true);
+    
+    // Reset music
+    if (endMusicRef.current) {
+      endMusicRef.current.pause();
+      endMusicRef.current.currentTime = 0;
+    }
+    
+    if (bossMusicRef.current) {
+      bossMusicRef.current.pause();
+      bossMusicRef.current.currentTime = 0;
+    }
+    
+    // Start background music again
+    if (backgroundMusicRef.current) {
+      backgroundMusicRef.current.currentTime = 0;
+      backgroundMusicRef.current.volume = 0.6;
+      backgroundMusicRef.current.play().catch(error => {
+        console.log("Background music autoplay failed on restart, will play on user interaction");
+      });
+    }
+    
+    // Reset music switched flag
+    musicSwitchedRef.current = false;
   };
 
   return (
