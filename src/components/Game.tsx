@@ -284,10 +284,10 @@ const Game = ({ gameState, setGameState, playMusic }: GameProps) => {
     }
   }, [hasAllItems]);
 
-  // Effect to stop attack sounds and play victory music when boss is defeated
+  // Effect to handle boss being defeated
   useEffect(() => {
     if (gameState.bossDefeated) {
-      console.log("Boss defeated detected, stopping combat sounds and switching music");
+      console.log("Boss defeated detected in Game component, showing victory screen");
       
       // Stop attack sound
       if (currentAttackSoundRef.current) {
@@ -358,11 +358,47 @@ const Game = ({ gameState, setGameState, playMusic }: GameProps) => {
     }
   }, [gameState.bossDefeated]);
 
+  // Effect specifically to debug bossDefeated state changes
+  useEffect(() => {
+    console.log('VICTORY DEBUG - gameState.bossDefeated changed to:', gameState.bossDefeated);
+    if (gameState.bossDefeated) {
+      console.log('VICTORY SHOULD BE SHOWING NOW!');
+    }
+  }, [gameState.bossDefeated]);
+
+  // Effect to continuously check boss health and ensure victory state
+  useEffect(() => {
+    // If boss health is 0 or less but bossDefeated isn't true, fix it
+    if (currentBossHealthRef.current <= 0 && !gameState.bossDefeated) {
+      console.log("FIXING INCONSISTENT STATE: Boss health is 0 but bossDefeated isn't true");
+      
+      // Create a fresh state object with bossDefeated set to true
+      const fixedState = {
+        ...gameState,
+        bossHealth: 0,
+        bossDefeated: true
+      };
+      
+      // Update state
+      setGameState(fixedState);
+      
+      // Update global state
+      if (window.setGameState) {
+        window.setGameState(fixedState);
+      }
+    }
+  }, [gameState, setGameState]);
+
   const handleIntroComplete = () => {
     setShowIntro(false);
   };
 
   const handleRestartGame = () => {
+    console.log("RESTARTING GAME FROM VICTORY SCREEN");
+    
+    // Reset boss health ref first
+    currentBossHealthRef.current = 100;
+    
     // Force teleport player to the start position
     if (window.gameState) {
       window.gameState = {
@@ -604,6 +640,14 @@ const Game = ({ gameState, setGameState, playMusic }: GameProps) => {
               // Update our ref immediately
               currentBossHealthRef.current = newHealth;
               
+              // Check if boss is defeated
+              const isBossDefeated = newHealth <= 0;
+              
+              // If boss is defeated, log it
+              if (isBossDefeated) {
+                console.log("BOSS DEFEATED! Setting bossDefeated flag to true");
+              }
+              
               // Create a completely fresh state object to prevent race conditions
               const updatedState = {
                 weapon: gameState.weapon,
@@ -614,8 +658,10 @@ const Game = ({ gameState, setGameState, playMusic }: GameProps) => {
                 collectedBlocks: [...gameState.collectedBlocks],
                 isInvulnerable: gameState.isInvulnerable,
                 bossHealth: newHealth,
-                bossDefeated: newHealth <= 0
+                bossDefeated: isBossDefeated
               };
+              
+              console.log("Setting gameState with bossDefeated =", isBossDefeated);
               
               // Update both local state and window state
               setGameState(updatedState);
@@ -623,6 +669,7 @@ const Game = ({ gameState, setGameState, playMusic }: GameProps) => {
               // Also update window.gameState for global access
               if (window.setGameState) {
                 window.setGameState(updatedState);
+                console.log("Updated window.gameState, bossDefeated =", window.gameState?.bossDefeated);
               }
             }}
           />
@@ -641,10 +688,15 @@ const Game = ({ gameState, setGameState, playMusic }: GameProps) => {
         <IntroMessages onComplete={handleIntroComplete} />
       )}
       
-      {/* Victory Screen */}
+      {/* Victory Screen - show when boss is defeated */}
       {gameState.bossDefeated && (
         <Victory onRestart={handleRestartGame} />
       )}
+      
+      {/* Debug info */}
+      <div style={{ display: 'none' }}>
+        {`Current bossDefeated: ${gameState.bossDefeated}`}
+      </div>
     </div>
   );
 };

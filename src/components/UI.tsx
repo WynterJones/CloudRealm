@@ -170,6 +170,18 @@ function UI({ gameState, bossHealth, bossDefeated = false, onMobileMove }: UIPro
     }
   };
 
+  // Hide boss UI when boss is defeated
+  useEffect(() => {
+    if (bossDefeated) {
+      // Clear boss UI when boss is defeated
+      setShowBossUI(false);
+      setShowBossNameAnimation(false);
+      
+      // Reset player health too
+      setPlayerHealth(100);
+    }
+  }, [bossDefeated]);
+
   // Show boss name with animation when all items are collected
   useEffect(() => {
     if (hasAllItems && !bossDefeated) {
@@ -219,13 +231,6 @@ function UI({ gameState, bossHealth, bossDefeated = false, onMobileMove }: UIPro
     
     return () => clearInterval(interval);
   }, [hasAllItems, bossDefeated]);
-  
-  // Reset player health when boss is defeated
-  useEffect(() => {
-    if (bossDefeated) {
-      setPlayerHealth(100);
-    }
-  }, [bossDefeated]);
   
   return (
     <div className="fixed inset-0" style={{ pointerEvents: 'none' }}>

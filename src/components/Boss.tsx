@@ -573,6 +573,55 @@ function Boss({ playerPosition, gameState, bossHealth, updateBossHealth }: BossP
   // Create a clone of the scene to be able to use ref
   const clonedScene = scene.clone();
 
+  // Update component when boss dies
+  useEffect(() => {
+    if (isDying && !isDefeated) {
+      console.log('Boss death animation starting');
+      
+      // After death animation completes, set to defeated
+      const defeatTimer = setTimeout(() => {
+        console.log('Boss is now fully defeated, hiding model');
+        setIsDefeated(true);
+        
+        // Ensure the parent knows the boss is defeated
+        updateBossHealth(0);
+      }, 4000); // 4 seconds for death animation
+      
+      return () => clearTimeout(defeatTimer);
+    }
+  }, [isDying, isDefeated]);
+  
+  // Clean up effect when boss is defeated
+  useEffect(() => {
+    if (isDefeated) {
+      console.log('Boss is defeated, clearing all effects and sounds');
+      
+      // Explicitly set health to 0 and mark as defeated again to ensure it's updated
+      console.log('Explicitly calling updateBossHealth(0) when boss is defeated');
+      updateBossHealth(0);
+      
+      // Clear all particle effects
+      setRainParticles(null);
+      setFireParticles(null);
+      setHeartParticles(null);
+      
+      // Stop boss audio with fade out
+      if (bossAudioRef.current) {
+        const fadeOut = setInterval(() => {
+          if (bossAudioRef.current && bossAudioRef.current.volume > 0.05) {
+            bossAudioRef.current.volume -= 0.05;
+          } else {
+            if (bossAudioRef.current) {
+              bossAudioRef.current.pause();
+              bossAudioRef.current.currentTime = 0;
+            }
+            clearInterval(fadeOut);
+          }
+        }, 50);
+      }
+    }
+  }, [isDefeated]);
+
   return (
     <>
       <group ref={bossRef}>

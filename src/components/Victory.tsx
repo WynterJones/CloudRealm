@@ -6,11 +6,22 @@ interface VictoryProps {
 }
 
 const Victory = ({ onComplete, onRestart }: VictoryProps) => {
+  console.log("Victory component mounted!");
+  
   const [showConfetti, setShowConfetti] = useState(false);
   const [showTypewriter, setShowTypewriter] = useState(false);
   const [typewriterText, setTypewriterText] = useState('');
   const [fullText] = useState('Enter the portal to continue or press Space to restart');
   const [fadeOut, setFadeOut] = useState(false);
+  
+  // Add debug logging on mount
+  useEffect(() => {
+    console.log("Victory component useEffect EXECUTED - Component is mounted!");
+    
+    return () => {
+      console.log("Victory component UNMOUNTED");
+    };
+  }, []);
   
   // Handle restart on space key press
   const handleKeyPress = useCallback((e: KeyboardEvent) => {
@@ -28,7 +39,9 @@ const Victory = ({ onComplete, onRestart }: VictoryProps) => {
           position: { x: 0, z: 0 },
           stage: 0,
           collectedBlocks: [],
-          isInvulnerable: true
+          isInvulnerable: true,
+          bossHealth: 100,
+          bossDefeated: false
         });
         
         // Add a second reset to ensure position is properly set
@@ -42,7 +55,9 @@ const Victory = ({ onComplete, onRestart }: VictoryProps) => {
               position: { x: 0, z: 0 },
               stage: 0,
               collectedBlocks: [],
-              isInvulnerable: true
+              isInvulnerable: true,
+              bossHealth: 100,
+              bossDefeated: false
             });
           }
         }, 100);
@@ -106,8 +121,21 @@ const Victory = ({ onComplete, onRestart }: VictoryProps) => {
   
   return (
     <div 
-      className={`fixed inset-0 flex flex-col items-center justify-center z-50 ${fadeOut ? 'opacity-0' : 'opacity-100'}`}
-      style={{ transition: 'opacity 1s ease-out' }}
+      className={`fixed inset-0 flex flex-col items-center justify-center ${fadeOut ? 'opacity-0' : 'opacity-100'}`}
+      style={{ 
+        transition: 'opacity 1s ease-out',
+        zIndex: 99999,
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}
     >
       {/* Dark overlay with some transparency */}
       <div className="absolute inset-0 bg-black bg-opacity-60" />
