@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { Mesh, Vector3, Vector2, PerspectiveCamera as ThreePerspectiveCamera, Quaternion, MathUtils, Group, SphereGeometry, MeshBasicMaterial } from 'three';
 import { PerspectiveCamera, useGLTF, Text } from '@react-three/drei';
 import { GameState, WeaponType, ArmourType, MagicType } from '../types/game';
+import WeaponOrbit from './WeaponOrbit';
 
 interface PlayerProps {
   gameState: GameState;
@@ -326,6 +327,18 @@ function Player({ gameState, setGameState }: PlayerProps) {
       <mesh ref={playerRef} position={[0, 0.2, 0]}>
         <group ref={modelRef}>
           <primitive object={clonedScene} scale={0.5} />
+          
+          {/* Add orbiting weapon if one is selected */}
+          {gameState.weapon && (
+            <WeaponOrbit 
+              weaponType={gameState.weapon} 
+              playerPosition={new Vector3(
+                positionRef.current.x,
+                playerRef.current ? playerRef.current.position.y : 0.2,
+                positionRef.current.z
+              )} 
+            />
+          )}
         </group>
       </mesh>
     </>
