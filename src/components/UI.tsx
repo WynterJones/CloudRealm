@@ -145,17 +145,20 @@ function UI({ gameState, bossHealth, bossDefeated = false, onMobileMove }: UIPro
   }, [bossDefeated]);
   
   return (
-    <div className="fixed inset-0 pointer-events-none">
+    <div className="fixed inset-0" style={{ pointerEvents: 'none' }}>
       {/* Mobile joystick */}
       {isMobile && (
         <div
           ref={joystickRef}
-          className="fixed bottom-8 left-8 w-24 h-24 rounded-full bg-white/10 border-2 border-white/20 pointer-events-auto"
+          className="fixed bottom-8 left-8 w-24 h-24 rounded-full"
           style={{
             zIndex: 10001,
             background: 'rgba(255, 255, 255, 0.15)',
             boxShadow: '0 0 20px rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(4px)'
+            backdropFilter: 'blur(4px)',
+            border: '2px solid rgba(255, 255, 255, 0.2)',
+            pointerEvents: 'auto',
+            touchAction: 'none'
           }}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
@@ -169,7 +172,8 @@ function UI({ gameState, bossHealth, bossDefeated = false, onMobileMove }: UIPro
               transform: 'translate(-50%, -50%)',
               transition: touchActive ? 'none' : 'all 0.2s ease-out',
               background: 'rgba(255, 255, 255, 0.4)',
-              boxShadow: '0 0 10px rgba(255, 255, 255, 0.3)'
+              boxShadow: '0 0 10px rgba(255, 255, 255, 0.3)',
+              pointerEvents: 'none'
             }}
           />
         </div>
