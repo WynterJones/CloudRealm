@@ -8,9 +8,8 @@ const IntroMessages = ({ onComplete }: IntroMessagesProps) => {
   const messages = [
     "Welcome to Cloud Realm...",
     "Use WASD to move around...",
-    "Select a Weapon...",
-    "Select Your Protection...",
-    "Choose Your Magic...",
+    "Turn around to return to the portal...",
+    "Select a Weapon, Protection, and Magic...",
     "...and Fight Your Own Mind..."
   ];
 
