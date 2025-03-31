@@ -13,18 +13,43 @@ const Victory = ({ onComplete, onRestart }: VictoryProps) => {
   const [typewriterText, setTypewriterText] = useState('');
   const [fullText] = useState('Enter the portal to continue or press Space to restart');
   const [fadeOut, setFadeOut] = useState(false);
+  const [visible, setVisible] = useState(true);
   
   // Add debug logging on mount
   useEffect(() => {
     console.log("Victory component useEffect EXECUTED - Component is mounted!");
     
+    // Auto-hide after 6 seconds
+    const hideTimer = setTimeout(() => {
+      console.log("Auto-hiding Victory screen after 6 seconds");
+      setFadeOut(true);
+      
+      // After fadeout animation completes, remove from DOM
+      setTimeout(() => {
+        setVisible(false);
+      }, 1000);
+    }, 6000);
+    
     return () => {
       console.log("Victory component UNMOUNTED");
+      clearTimeout(hideTimer);
     };
   }, []);
   
   // Handle restart on space key press
   const handleKeyPress = useCallback((e: KeyboardEvent) => {
+    // Any key press will dismiss the victory screen early
+    if (visible && !fadeOut) {
+      console.log("Key pressed, dismissing Victory screen early");
+      setFadeOut(true);
+      
+      // After fadeout animation completes, remove from DOM
+      setTimeout(() => {
+        setVisible(false);
+      }, 1000);
+    }
+    
+    // Space specifically will restart the game
     if (e.code === 'Space' && showTypewriter && onRestart) {
       setFadeOut(true);
       
@@ -80,7 +105,7 @@ const Victory = ({ onComplete, onRestart }: VictoryProps) => {
         onRestart();
       }, 1000);
     }
-  }, [showTypewriter, onRestart]);
+  }, [showTypewriter, onRestart, visible, fadeOut]);
   
   // Set up key event listener
   useEffect(() => {
@@ -118,6 +143,9 @@ const Victory = ({ onComplete, onRestart }: VictoryProps) => {
       return () => clearTimeout(timer);
     }
   }, [typewriterText, fullText, showTypewriter]);
+  
+  // Don't render anything if not visible
+  if (!visible) return null;
   
   return (
     <div 
