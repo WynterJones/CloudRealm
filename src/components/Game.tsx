@@ -5,6 +5,7 @@ import { Color } from 'three';
 import Bridge from './Bridge.tsx';
 import Player from './Player.tsx';
 import UI from './UI.tsx';
+import Boss from './Boss.tsx';
 import { GameState } from '../types/game';
 
 function Game() {
@@ -17,12 +18,27 @@ function Game() {
     collectedBlocks: []
   });
 
+  // Check if all items are collected to spawn the boss
+  const hasAllItems = gameState.weapon !== null && gameState.armour !== null && gameState.magic !== null;
+  
+  // Refs for music control
+  const backgroundMusicRef = useRef<HTMLAudioElement | null>(null);
+  const bossMusicRef = useRef<HTMLAudioElement | null>(null);
+  const musicSwitchedRef = useRef(false);
+
   // Initialize background music
   useEffect(() => {
-    const backgroundMusic = new Audio('/models/bg.mp3');
-    backgroundMusic.loop = true;
-    backgroundMusic.volume = 0.6; // 60% volume
-    backgroundMusic.play().catch(error => {
+    // Create audio elements
+    backgroundMusicRef.current = new Audio('/models/bg.mp3');
+    backgroundMusicRef.current.loop = true;
+    backgroundMusicRef.current.volume = 0.6;
+    
+    bossMusicRef.current = new Audio('/models/boss.mp3');
+    bossMusicRef.current.loop = true;
+    bossMusicRef.current.volume = 0.7;
+    
+    // Try to play initial background music
+    backgroundMusicRef.current.play().catch(error => {
       // Create a button to play music on user interaction if autoplay fails
       const playButton = document.createElement('button');
       playButton.textContent = 'Play Music';
@@ -38,7 +54,11 @@ function Game() {
       playButton.style.cursor = 'pointer';
       
       playButton.onclick = () => {
-        backgroundMusic.play();
+        if (hasAllItems && bossMusicRef.current) {
+          bossMusicRef.current.play();
+        } else if (backgroundMusicRef.current) {
+          backgroundMusicRef.current.play();
+        }
         playButton.remove();
       };
       
@@ -47,10 +67,55 @@ function Game() {
     
     // Clean up
     return () => {
-      backgroundMusic.pause();
-      backgroundMusic.src = '';
+      if (backgroundMusicRef.current) {
+        backgroundMusicRef.current.pause();
+        backgroundMusicRef.current.src = '';
+      }
+      if (bossMusicRef.current) {
+        bossMusicRef.current.pause();
+        bossMusicRef.current.src = '';
+      }
     };
   }, []);
+  
+  // Effect to switch music when boss appears
+  useEffect(() => {
+    // Only run this once when hasAllItems becomes true
+    if (hasAllItems && !musicSwitchedRef.current && backgroundMusicRef.current && bossMusicRef.current) {
+      const bgMusic = backgroundMusicRef.current;
+      const bossMusic = bossMusicRef.current;
+      
+      // Fade out background music
+      const fadeOutInterval = setInterval(() => {
+        if (bgMusic && bgMusic.volume > 0.05) {
+          bgMusic.volume -= 0.05;
+        } else {
+          clearInterval(fadeOutInterval);
+          if (bgMusic) {
+            bgMusic.pause();
+          }
+          
+          // Start boss music
+          bossMusic.play().catch(error => {
+            console.log("Boss music autoplay failed, will play on user interaction");
+          });
+          
+          // Fade in boss music
+          let bossVolume = 0;
+          const fadeInInterval = setInterval(() => {
+            if (bossVolume < 0.7) {
+              bossVolume += 0.05;
+              bossMusic.volume = bossVolume;
+            } else {
+              clearInterval(fadeInInterval);
+            }
+          }, 100);
+          
+          musicSwitchedRef.current = true;
+        }
+      }, 100);
+    }
+  }, [hasAllItems]);
 
   return (
     <div className="relative w-full h-full">
@@ -103,8 +168,25 @@ function Game() {
         
         <Bridge gameState={gameState} />
         <Player gameState={gameState} setGameState={setGameState} />
+        
+        {/* Render boss only when all items are collected */}
+        {hasAllItems && <Boss playerPosition={gameState.position} />}
       </Canvas>
       <UI gameState={gameState} />
+      
+      {/* Play Music button - visible from UI */}
+      <button 
+        className="absolute bottom-5 right-5 px-4 py-2 bg-black bg-opacity-50 text-white rounded cursor-pointer z-50 hover:bg-opacity-70"
+        onClick={() => {
+          if (hasAllItems && bossMusicRef.current) {
+            bossMusicRef.current.play();
+          } else if (backgroundMusicRef.current) {
+            backgroundMusicRef.current.play();
+          }
+        }}
+      >
+        Play Music
+      </button>
     </div>
   );
 }
