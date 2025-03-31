@@ -13,44 +13,26 @@ const Victory = ({ onComplete, onRestart }: VictoryProps) => {
   const [typewriterText, setTypewriterText] = useState('');
   const [fullText] = useState('Enter the portal to continue or press Space to restart');
   const [fadeOut, setFadeOut] = useState(false);
-  const [visible, setVisible] = useState(true);
   
-  // Add debug logging on mount
-  // useEffect(() => {
-  //   console.log("Victory component useEffect EXECUTED - Component is mounted!");
+  // Debug logging on mount and update
+  useEffect(() => {
+    console.log("VICTORY DEBUG: Component mounting/updating");
+    console.log("VICTORY DEBUG: Window gameState:", window.gameState);
+    console.log("VICTORY DEBUG: bossDefeated value:", window.gameState?.bossDefeated);
     
-  //   // Auto-hide after 6 seconds
-  //   const hideTimer = setTimeout(() => {
-  //     console.log("Auto-hiding Victory screen after 6 seconds");
-  //     setFadeOut(true);
-      
-  //     // After fadeout animation completes, remove from DOM
-  //     setTimeout(() => {
-  //       setVisible(false);
-  //     }, 1000);
-  //   }, 12000);
-    
-  //   return () => {
-  //     console.log("Victory component UNMOUNTED");
-  //     clearTimeout(hideTimer);
-  //   };
-  // }, []);
+    // No auto-hide timer - let player manually dismiss
+    return () => {
+      console.log("VICTORY DEBUG: Component UNMOUNTING");
+      console.log("VICTORY DEBUG: On unmount - Window gameState:", window.gameState);
+      console.log("VICTORY DEBUG: On unmount - bossDefeated value:", window.gameState?.bossDefeated);
+    };
+  }, []);
   
   // Handle restart on space key press
   const handleKeyPress = useCallback((e: KeyboardEvent) => {
-    // Any key press will dismiss the victory screen early
-    if (visible && !fadeOut) {
-      console.log("Key pressed, dismissing Victory screen early");
-      setFadeOut(true);
-      
-      // After fadeout animation completes, remove from DOM
-      setTimeout(() => {
-        setVisible(false);
-      }, 1000);
-    }
-    
     // Space specifically will restart the game
     if (e.code === 'Space' && showTypewriter && onRestart) {
+      console.log("VICTORY DEBUG: Space key pressed, restarting game");
       setFadeOut(true);
       
       // Immediately teleport the player back to the start position before executing onRestart
@@ -105,7 +87,7 @@ const Victory = ({ onComplete, onRestart }: VictoryProps) => {
         onRestart();
       }, 1000);
     }
-  }, [showTypewriter, onRestart, visible, fadeOut]);
+  }, [showTypewriter, onRestart]);
   
   // Set up key event listener
   useEffect(() => {
@@ -143,9 +125,6 @@ const Victory = ({ onComplete, onRestart }: VictoryProps) => {
       return () => clearTimeout(timer);
     }
   }, [typewriterText, fullText, showTypewriter]);
-  
-  // Don't render anything if not visible
-  if (!visible) return null;
   
   return (
     <div 
@@ -192,6 +171,8 @@ const Victory = ({ onComplete, onRestart }: VictoryProps) => {
           {showTypewriter ? typewriterText : 'You have conquered your Mind'}
         </h2>
       </div>
+      
+     
       
       {/* Confetti container */}
       {showConfetti && (

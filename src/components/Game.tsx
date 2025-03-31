@@ -55,6 +55,9 @@ const Game = ({ gameState, setGameState, playMusic }: GameProps) => {
   // Create a ref to track current boss health to avoid state update delays
   const currentBossHealthRef = useRef(gameState.bossHealth);
   
+  // State to track victory screen display
+  const [showVictory, setShowVictory] = useState(false);
+  
   // Update our local ref whenever gameState changes
   useEffect(() => {
     currentBossHealthRef.current = gameState.bossHealth;
@@ -389,12 +392,23 @@ const Game = ({ gameState, setGameState, playMusic }: GameProps) => {
     }
   }, [gameState, setGameState]);
 
+  // Add effect to handle victory state
+  useEffect(() => {
+    if (gameState.bossDefeated && !showVictory) {
+      console.log("VICTORY DEBUG: Setting showVictory to true");
+      setShowVictory(true);
+    }
+  }, [gameState.bossDefeated, showVictory]);
+
   const handleIntroComplete = () => {
     setShowIntro(false);
   };
 
   const handleRestartGame = () => {
     console.log("RESTARTING GAME FROM VICTORY SCREEN");
+    
+    // Hide the victory screen
+    setShowVictory(false);
     
     // Reset boss health ref first
     currentBossHealthRef.current = 100;
@@ -688,8 +702,8 @@ const Game = ({ gameState, setGameState, playMusic }: GameProps) => {
         <IntroMessages onComplete={handleIntroComplete} />
       )}
       
-      {/* Victory Screen - show when boss is defeated */}
-      {gameState.bossDefeated && (
+      {/* Victory Screen - show when victory state is true, not just when boss is defeated */}
+      {showVictory && (
         <Victory onRestart={handleRestartGame} />
       )}
       
