@@ -37,34 +37,6 @@ function Game() {
     bossMusicRef.current.loop = true;
     bossMusicRef.current.volume = 0.7;
     
-    // Try to play initial background music
-    backgroundMusicRef.current.play().catch(error => {
-      // Create a button to play music on user interaction if autoplay fails
-      const playButton = document.createElement('button');
-      playButton.textContent = 'Play Music';
-      playButton.style.position = 'fixed';
-      playButton.style.bottom = '20px';
-      playButton.style.right = '20px';
-      playButton.style.zIndex = '1000';
-      playButton.style.padding = '10px';
-      playButton.style.background = 'rgba(0,0,0,0.5)';
-      playButton.style.color = 'white';
-      playButton.style.border = 'none';
-      playButton.style.borderRadius = '5px';
-      playButton.style.cursor = 'pointer';
-      
-      playButton.onclick = () => {
-        if (hasAllItems && bossMusicRef.current) {
-          bossMusicRef.current.play();
-        } else if (backgroundMusicRef.current) {
-          backgroundMusicRef.current.play();
-        }
-        playButton.remove();
-      };
-      
-      document.body.appendChild(playButton);
-    });
-    
     // Clean up
     return () => {
       if (backgroundMusicRef.current) {
@@ -117,6 +89,15 @@ function Game() {
     }
   }, [hasAllItems]);
 
+  // Function to play music
+  const playMusic = () => {
+    if (hasAllItems && bossMusicRef.current) {
+      bossMusicRef.current.play();
+    } else if (backgroundMusicRef.current) {
+      backgroundMusicRef.current.play();
+    }
+  };
+
   return (
     <div className="relative w-full h-full">
       <Canvas
@@ -167,26 +148,27 @@ function Game() {
         </group>
         
         <Bridge gameState={gameState} />
-        <Player gameState={gameState} setGameState={setGameState} />
+        <Player gameState={gameState} setGameState={setGameState} playMusic={playMusic} />
         
         {/* Render boss only when all items are collected */}
-        {hasAllItems && <Boss playerPosition={gameState.position} />}
+        {hasAllItems && <Boss playerPosition={gameState.position} gameState={gameState} />}
       </Canvas>
       <UI gameState={gameState} />
       
-      {/* Play Music button - visible from UI */}
-      <button 
-        className="absolute bottom-5 right-5 px-4 py-2 bg-black bg-opacity-50 text-white rounded cursor-pointer z-50 hover:bg-opacity-70"
-        onClick={() => {
-          if (hasAllItems && bossMusicRef.current) {
-            bossMusicRef.current.play();
-          } else if (backgroundMusicRef.current) {
-            backgroundMusicRef.current.play();
-          }
-        }}
+      {/* Wynter logo link */}
+      <a 
+        href="https://wynter.ai" 
+        target="_blank" 
+        rel="noopener noreferrer"
+        className="fixed bottom-5 right-5 z-50 hover:opacity-80 transition-opacity"
       >
-        Play Music
-      </button>
+        <img 
+          src="/models/wynter-logo.png" 
+          alt="Wynter.ai" 
+          width="200" 
+          className="drop-shadow-lg"
+        />
+      </a>
     </div>
   );
 }

@@ -1,17 +1,33 @@
 import { useRef, useEffect, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { useGLTF } from '@react-three/drei';
-import { Group, Vector3, MathUtils } from 'three';
+import { useGLTF, Html } from '@react-three/drei';
+import { Group, Vector3, MathUtils, Color, PointLight, Mesh, SphereGeometry, MeshBasicMaterial, BufferGeometry, Points, PointsMaterial, Float32BufferAttribute, BoxGeometry } from 'three';
+import { GameState } from '../types/game';
 
 interface BossProps {
   playerPosition: { x: number, z: number };
+  gameState: GameState;
 }
 
-function Boss({ playerPosition }: BossProps) {
+function Boss({ playerPosition, gameState }: BossProps) {
   const bossRef = useRef<Group>(null);
+  const effectsRef = useRef<Group>(null);
   const { scene } = useGLTF('/models/brain.glb');
   const [isDescending, setIsDescending] = useState(true);
   const [initialPosition] = useState(new Vector3(0, 15, 55));
+  const [bossHealth, setBossHealth] = useState(100);
+  const [isDying, setIsDying] = useState(false);
+  const [isDefeated, setIsDefeated] = useState(false);
+  const [showDamageEffect, setShowDamageEffect] = useState(false);
+  const damageRef = useRef(0);
+  
+  // Effect particles for different magic types
+  const [rainParticles, setRainParticles] = useState<Points | null>(null);
+  const [fireParticles, setFireParticles] = useState<Points | null>(null);
+  const [heartParticles, setHeartParticles] = useState<Points | null>(null);
+  
+  // Reference for the light that will change color based on magic
+  const magicLightRef = useRef<PointLight>(null);
   
   // Simplified spin state management
   const spinState = useRef({
@@ -20,9 +36,38 @@ function Boss({ playerPosition }: BossProps) {
     spinStartTime: 0
   });
   
+  // Combat system
+  const combatState = useRef({
+    lastAttackTime: 0,
+    attackInterval: 1.5, // Attack every 1.5 seconds
+    baseDamage: 5
+  });
+  
   // Target position in front of player
   const targetDistance = 20; // 20 feet in front of the player
   const targetHeight = 2.5; // Hover height above the bridge
+
+  // Calculate damage based on player equipment
+  const calculateDamage = () => {
+    let damage = combatState.current.baseDamage;
+    
+    // Weapon bonus
+    if (gameState.weapon === 'axe') damage += 3;
+    else if (gameState.weapon === 'sword') damage += 2;
+    else if (gameState.weapon === 'fist') damage += 1;
+    
+    // Armor bonus
+    if (gameState.armour === 'steel') damage += 2;
+    else if (gameState.armour === 'gold') damage += 1;
+    else if (gameState.armour === 'knowledge') damage += 3;
+    
+    // Magic multiplier
+    if (gameState.magic === 'fire') damage *= 1.5;
+    else if (gameState.magic === 'water') damage *= 1.2;
+    else if (gameState.magic === 'love') damage *= 1.3;
+    
+    return Math.round(damage);
+  };
 
   // Initial setup
   useEffect(() => {
@@ -43,14 +88,184 @@ function Boss({ playerPosition }: BossProps) {
         setIsDescending(false);
       }, descentDuration);
     }
+    
+    // Create particles for different magic effects
+    if (effectsRef.current) {
+      // Rain particles for water magic
+      const rainGeometry = new BufferGeometry();
+      const rainVertices = [];
+      
+      for (let i = 0; i < 1000; i++) {
+        const x = (Math.random() - 0.5) * 10;
+        const y = Math.random() * 10;
+        const z = (Math.random() - 0.5) * 10;
+        rainVertices.push(x, y, z);
+      }
+      
+      rainGeometry.setAttribute('position', new Float32BufferAttribute(rainVertices, 3));
+      const rainMaterial = new PointsMaterial({ 
+        color: 0x00aaff,
+        size: 0.05,
+        transparent: true,
+        opacity: 0.7
+      });
+      
+      const newRainParticles = new Points(rainGeometry, rainMaterial);
+      newRainParticles.visible = false;
+      setRainParticles(newRainParticles);
+      effectsRef.current.add(newRainParticles);
+      
+      // Fire particles
+      const fireGeometry = new BufferGeometry();
+      const fireVertices = [];
+      
+      for (let i = 0; i < 500; i++) {
+        const x = (Math.random() - 0.5) * 8;
+        const y = Math.random() * 5;
+        const z = (Math.random() - 0.5) * 8;
+        fireVertices.push(x, y, z);
+      }
+      
+      fireGeometry.setAttribute('position', new Float32BufferAttribute(fireVertices, 3));
+      const fireMaterial = new PointsMaterial({ 
+        color: 0xff5500,
+        size: 0.1,
+        transparent: true,
+        opacity: 0.8
+      });
+      
+      const newFireParticles = new Points(fireGeometry, fireMaterial);
+      newFireParticles.visible = false;
+      setFireParticles(newFireParticles);
+      effectsRef.current.add(newFireParticles);
+      
+      // Heart particles for love magic
+      const heartGeometry = new BufferGeometry();
+      const heartVertices = [];
+      
+      for (let i = 0; i < 300; i++) {
+        const x = (Math.random() - 0.5) * 12;
+        const y = Math.random() * 8;
+        const z = (Math.random() - 0.5) * 12;
+        heartVertices.push(x, y, z);
+      }
+      
+      heartGeometry.setAttribute('position', new Float32BufferAttribute(heartVertices, 3));
+      const heartMaterial = new PointsMaterial({ 
+        color: 0xff00aa,
+        size: 0.15,
+        transparent: true,
+        opacity: 0.9
+      });
+      
+      const newHeartParticles = new Points(heartGeometry, heartMaterial);
+      newHeartParticles.visible = false;
+      setHeartParticles(newHeartParticles);
+      effectsRef.current.add(newHeartParticles);
+    }
   }, [initialPosition]);
+  
+  // Effect for showing damage
+  useEffect(() => {
+    if (showDamageEffect) {
+      const timer = setTimeout(() => {
+        setShowDamageEffect(false);
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [showDamageEffect]);
+  
+  // Update magic effects based on player's magic selection
+  useEffect(() => {
+    if (!effectsRef.current) return;
+    
+    // Hide all effects first
+    if (rainParticles) rainParticles.visible = false;
+    if (fireParticles) fireParticles.visible = false;
+    if (heartParticles) heartParticles.visible = false;
+    
+    // Show effect based on selected magic
+    if (gameState.magic === 'water' && rainParticles) {
+      rainParticles.visible = true;
+      if (magicLightRef.current) {
+        magicLightRef.current.color = new Color(0x00aaff);
+        magicLightRef.current.intensity = 2;
+      }
+    } else if (gameState.magic === 'fire' && fireParticles) {
+      fireParticles.visible = true;
+      if (magicLightRef.current) {
+        magicLightRef.current.color = new Color(0xff5500);
+        magicLightRef.current.intensity = 3;
+      }
+    } else if (gameState.magic === 'love' && heartParticles) {
+      heartParticles.visible = true;
+      if (magicLightRef.current) {
+        magicLightRef.current.color = new Color(0xff00aa);
+        magicLightRef.current.intensity = 2.5;
+      }
+    }
+  }, [gameState.magic, rainParticles, fireParticles, heartParticles]);
 
   // Animation loop
   useFrame((state, delta) => {
-    if (!bossRef.current) return;
+    if (!bossRef.current || !effectsRef.current) return;
+    
+    // If boss is defeated, handle death animation
+    if (isDefeated) {
+      // Rise up to the sky
+      bossRef.current.position.y += delta * 10;
+      
+      // Rotate faster as it ascends
+      bossRef.current.rotation.y += delta * 5;
+      
+      return;
+    }
+    
+    // Death animation - pulsate before shooting up
+    if (isDying) {
+      const pulseFrequency = 5;
+      const pulseAmplitude = 1 + Math.sin(state.clock.getElapsedTime() * pulseFrequency) * 0.5;
+      bossRef.current.scale.set(
+        3 * pulseAmplitude,
+        3 * pulseAmplitude,
+        3 * pulseAmplitude
+      );
+      
+      // After 3 seconds of pulsing, set to defeated
+      if (state.clock.getElapsedTime() - damageRef.current > 3) {
+        setIsDefeated(true);
+      }
+      
+      return;
+    }
     
     // Calculate target position (20 feet in front of player)
     const playerForwardZ = playerPosition.z + targetDistance;
+    
+    // Calculate damage and attack at intervals if boss is active
+    if (!isDescending && !isDying && gameState.magic) {
+      const currentTime = state.clock.getElapsedTime();
+      
+      if (currentTime - combatState.current.lastAttackTime > combatState.current.attackInterval) {
+        // Time for a new attack
+        const damage = calculateDamage();
+        setBossHealth(prev => {
+          const newHealth = Math.max(0, prev - damage);
+          if (newHealth === 0 && !isDying) {
+            setIsDying(true);
+            damageRef.current = currentTime;
+          }
+          return newHealth;
+        });
+        
+        // Show damage effect
+        setShowDamageEffect(true);
+        
+        // Update last attack time
+        combatState.current.lastAttackTime = currentTime;
+      }
+    }
     
     if (isDescending) {
       // Descent animation - move down gradually
@@ -91,6 +306,72 @@ function Boss({ playerPosition }: BossProps) {
       const bobSpeed = 0.5;
       bossRef.current.position.y = targetHeight + 
         Math.sin(state.clock.getElapsedTime() * bobSpeed) * bobHeight;
+      
+      // Position effects to follow the boss
+      effectsRef.current.position.copy(bossRef.current.position);
+      
+      // Animate rain particles (water magic)
+      if (rainParticles && rainParticles.visible) {
+        const positions = rainParticles.geometry.attributes.position.array;
+        for (let i = 0; i < positions.length; i += 3) {
+          // Move rain downward
+          positions[i + 1] -= delta * 5; // Speed of falling
+          
+          // Reset if below ground
+          if (positions[i + 1] < -5) {
+            positions[i + 1] = 10; // Reset to top
+            positions[i] = (Math.random() - 0.5) * 10; // Randomize x
+            positions[i + 2] = (Math.random() - 0.5) * 10; // Randomize z
+          }
+        }
+        rainParticles.geometry.attributes.position.needsUpdate = true;
+      }
+      
+      // Animate fire particles
+      if (fireParticles && fireParticles.visible) {
+        const positions = fireParticles.geometry.attributes.position.array;
+        for (let i = 0; i < positions.length; i += 3) {
+          // Move fire upward
+          positions[i + 1] += delta * (1 + Math.random() * 2); // Variable speed
+          
+          // Add some randomness to X and Z
+          positions[i] += delta * (Math.random() - 0.5) * 2;
+          positions[i + 2] += delta * (Math.random() - 0.5) * 2;
+          
+          // Reset if above threshold
+          if (positions[i + 1] > 5) {
+            positions[i + 1] = Math.random() * 0.5; // Reset near ground
+            positions[i] = (Math.random() - 0.5) * 8; // Randomize x
+            positions[i + 2] = (Math.random() - 0.5) * 8; // Randomize z
+          }
+        }
+        fireParticles.geometry.attributes.position.needsUpdate = true;
+      }
+      
+      // Animate heart particles
+      if (heartParticles && heartParticles.visible) {
+        const positions = heartParticles.geometry.attributes.position.array;
+        for (let i = 0; i < positions.length; i += 3) {
+          // Move hearts in all directions
+          positions[i] += delta * (Math.random() - 0.5) * 2; // X movement
+          positions[i + 1] += delta * (0.5 + Math.random() * 1); // Upward Y movement
+          positions[i + 2] += delta * (Math.random() - 0.5) * 2; // Z movement
+          
+          // Reset if too far
+          const distance = Math.sqrt(
+            positions[i] * positions[i] + 
+            positions[i + 1] * positions[i + 1] + 
+            positions[i + 2] * positions[i + 2]
+          );
+          
+          if (distance > 12 || positions[i + 1] > 8) {
+            positions[i] = (Math.random() - 0.5) * 6; // Close to center
+            positions[i + 1] = Math.random() * 1; // Low height
+            positions[i + 2] = (Math.random() - 0.5) * 6; // Close to center
+          }
+        }
+        heartParticles.geometry.attributes.position.needsUpdate = true;
+      }
       
       // Handle spinning logic
       const currentTime = state.clock.getElapsedTime();
@@ -137,9 +418,68 @@ function Boss({ playerPosition }: BossProps) {
   const clonedScene = scene.clone();
 
   return (
-    <group ref={bossRef}>
-      <primitive object={clonedScene} />
-    </group>
+    <>
+      <group ref={bossRef}>
+        <primitive object={clonedScene} />
+        
+        {/* UI for boss health */}
+        <Html position={[0, 5, 0]} center>
+          <div style={{ 
+            width: '200px', 
+            background: 'rgba(0, 0, 0, 0.7)', 
+            padding: '8px', 
+            borderRadius: '4px',
+            textAlign: 'center',
+            transform: 'scale(1.5)'
+          }}>
+            <div style={{ 
+              color: 'white', 
+              marginBottom: '5px',
+              fontWeight: 'bold',
+              textTransform: 'uppercase',
+              fontFamily: 'Arial, sans-serif'
+            }}>
+              The Mind
+            </div>
+            <div style={{ 
+              width: '100%', 
+              height: '10px', 
+              background: '#333', 
+              borderRadius: '5px',
+              overflow: 'hidden'
+            }}>
+              <div style={{ 
+                width: `${bossHealth}%`, 
+                height: '100%', 
+                background: bossHealth > 50 ? '#4CAF50' : bossHealth > 20 ? '#FFEB3B' : '#F44336',
+                transition: 'width 0.3s, background 0.3s'
+              }}></div>
+            </div>
+          </div>
+        </Html>
+        
+        {/* Damage effect */}
+        {showDamageEffect && (
+          <Html position={[0, 3, 0]} center>
+            <div style={{ 
+              color: 'red', 
+              fontWeight: 'bold',
+              fontSize: '18px',
+              textShadow: '0 0 3px black',
+              animation: 'damageAnim 0.5s',
+              fontFamily: 'Arial, sans-serif'
+            }}>
+              {calculateDamage()}
+            </div>
+          </Html>
+        )}
+      </group>
+      
+      {/* Effects group */}
+      <group ref={effectsRef}>
+        <pointLight ref={magicLightRef} color="white" intensity={0} distance={15} />
+      </group>
+    </>
   );
 }
 

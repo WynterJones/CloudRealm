@@ -9,9 +9,10 @@ import ArmourOrbit from './ArmourOrbit';
 interface PlayerProps {
   gameState: GameState;
   setGameState: (state: GameState) => void;
+  playMusic: () => void;
 }
 
-function Player({ gameState, setGameState }: PlayerProps) {
+function Player({ gameState, setGameState, playMusic }: PlayerProps) {
   const playerRef = useRef<Mesh>(null);
   const modelRef = useRef<Group>(null);
   const cameraRef = useRef<ThreePerspectiveCamera>(null);
@@ -45,6 +46,9 @@ function Player({ gameState, setGameState }: PlayerProps) {
 
   // Track if we've forced a selection
   const [selectionForced, setSelectionForced] = useState(false);
+
+  // Track if music has been played yet
+  const musicStartedRef = useRef(false);
 
   // Define card positions for all stages - moved outside the frame loop for visualization
   const stageCardPositions = [
@@ -160,6 +164,12 @@ function Player({ gameState, setGameState }: PlayerProps) {
     const handleKeyDown = (e: KeyboardEvent) => {
       keys.add(e.key.toLowerCase());
       
+      // Play music on first movement if not already started
+      if (!musicStartedRef.current && ['w', 'a', 's', 'd'].includes(e.key.toLowerCase())) {
+        playMusic();
+        musicStartedRef.current = true;
+      }
+      
       // Number keys 1-3 to force select a card
       if (e.key === '1' || e.key === '2' || e.key === '3') {
         const cardIndex = parseInt(e.key) - 1;
@@ -212,7 +222,7 @@ function Player({ gameState, setGameState }: PlayerProps) {
       window.removeEventListener('keyup', handleKeyUp);
       cancelAnimationFrame(animationFrameId);
     };
-  }, [forceSelectCard, speed, updatePosition]);
+  }, [forceSelectCard, speed, updatePosition, playMusic]);
   
   useFrame((state, delta) => {
     if (playerRef.current) {
