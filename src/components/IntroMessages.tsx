@@ -7,8 +7,9 @@ interface IntroMessagesProps {
 const IntroMessages = ({ onComplete }: IntroMessagesProps) => {
   const messages = [
     "Welcome to Cloud Realm...",
+    "Use WASD to move around...",
     "Select a Weapon...",
-    "Grab Protection...",
+    "Select Your Protection...",
     "Choose Your Magic...",
     "...and Fight Your Own Mind..."
   ];

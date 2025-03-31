@@ -7,15 +7,16 @@ import { GameState } from '../types/game';
 interface BossProps {
   playerPosition: { x: number, z: number };
   gameState: GameState;
+  bossHealth: number;
+  updateBossHealth: (newHealth: number) => void;
 }
 
-function Boss({ playerPosition, gameState }: BossProps) {
+function Boss({ playerPosition, gameState, bossHealth, updateBossHealth }: BossProps) {
   const bossRef = useRef<Group>(null);
   const effectsRef = useRef<Group>(null);
   const { scene } = useGLTF('/models/brain.glb');
   const [isDescending, setIsDescending] = useState(true);
   const [initialPosition] = useState(new Vector3(0, 15, 55));
-  const [bossHealth, setBossHealth] = useState(100);
   const [isDying, setIsDying] = useState(false);
   const [isDefeated, setIsDefeated] = useState(false);
   const [showDamageEffect, setShowDamageEffect] = useState(false);
@@ -256,14 +257,14 @@ function Boss({ playerPosition, gameState }: BossProps) {
       if (currentTime - combatState.current.lastAttackTime > combatState.current.attackInterval) {
         // Time for a new attack
         const damage = calculateDamage();
-        setBossHealth(prev => {
-          const newHealth = Math.max(0, prev - damage);
-          if (newHealth === 0 && !isDying) {
-            setIsDying(true);
-            damageRef.current = currentTime;
-          }
-          return newHealth;
-        });
+        const newHealth = Math.max(0, bossHealth - damage);
+        updateBossHealth(newHealth);
+        
+        // Check if the boss is dying
+        if (newHealth === 0 && !isDying) {
+          setIsDying(true);
+          damageRef.current = currentTime;
+        }
         
         // Show damage effect
         setShowDamageEffect(true);
@@ -428,49 +429,6 @@ function Boss({ playerPosition, gameState }: BossProps) {
       <group ref={bossRef}>
         <primitive object={clonedScene} />
         
-        {/* UI for boss health */}
-        <Html position={[0, 5, 0]} center>
-          <div style={{ 
-            width: '250px', 
-            background: 'rgba(0, 0, 0, 0.7)', 
-            padding: '10px', 
-            borderRadius: '8px',
-            textAlign: 'center',
-            transform: 'scale(2)',
-            animation: showBossNameAnimation ? 'fadeInScale 1s ease-out' : 'none',
-            boxShadow: '0 0 20px rgba(255, 0, 0, 0.5)'
-          }}>
-            <div style={{ 
-              color: 'white', 
-              marginBottom: '8px',
-              fontWeight: 'bold',
-              textTransform: 'uppercase',
-              fontFamily: 'Arial, sans-serif',
-              fontSize: '18px',
-              letterSpacing: '2px',
-              textShadow: '0 0 10px red, 0 0 15px red'
-            }}>
-              THE MIND
-            </div>
-            <div style={{ 
-              width: '100%', 
-              height: '12px', 
-              background: '#333', 
-              borderRadius: '6px',
-              overflow: 'hidden',
-              boxShadow: 'inset 0 0 5px rgba(0, 0, 0, 0.5)'
-            }}>
-              <div style={{ 
-                width: `${bossHealth}%`, 
-                height: '100%', 
-                background: bossHealth > 50 ? '#4CAF50' : bossHealth > 20 ? '#FFEB3B' : '#F44336',
-                transition: 'width 0.3s, background 0.3s',
-                boxShadow: '0 0 10px rgba(255, 255, 255, 0.3)'
-              }}></div>
-            </div>
-          </div>
-        </Html>
-        
         {/* Damage effect */}
         {showDamageEffect && (
           <Html position={[0, 3, 0]} center>
@@ -493,15 +451,9 @@ function Boss({ playerPosition, gameState }: BossProps) {
         <pointLight ref={magicLightRef} color="white" intensity={0} distance={15} />
       </group>
       
-      {/* Add the CSS animation for the boss name */}
+      {/* Add the CSS animation for the damage numbers */}
       <Html position={[0, 0, 0]}>
         <style dangerouslySetInnerHTML={{ __html: `
-          @keyframes fadeInScale {
-            0% { opacity: 0; transform: scale(0); }
-            70% { opacity: 1; transform: scale(2.2); }
-            100% { transform: scale(2); }
-          }
-          
           @keyframes damageAnim {
             0% { transform: scale(1); opacity: 0; }
             50% { transform: scale(1.5); opacity: 1; }

@@ -8,6 +8,7 @@ import UI from './UI.tsx';
 import Boss from './Boss.tsx';
 import AdBillboards from './AdBillboards.tsx';
 import IntroMessages from './IntroMessages.tsx';
+import Victory from './Victory.tsx';
 import { GameState } from '../types/game';
 
 function Game() {
@@ -21,6 +22,8 @@ function Game() {
   });
   
   const [showIntro, setShowIntro] = useState(true);
+  const [bossHealth, setBossHealth] = useState(100);
+  const [bossDefeated, setBossDefeated] = useState(false);
 
   // Check if all items are collected to spawn the boss
   const hasAllItems = gameState.weapon !== null && gameState.armour !== null && gameState.magic !== null;
@@ -29,10 +32,22 @@ function Game() {
   const backgroundMusicRef = useRef<HTMLAudioElement | null>(null);
   const bossMusicRef = useRef<HTMLAudioElement | null>(null);
   const musicSwitchedRef = useRef(false);
+  
+  // Refs for weapon attack sounds
+  const swordAttackRef = useRef<HTMLAudioElement | null>(null);
+  const axeAttackRef = useRef<HTMLAudioElement | null>(null);
+  const fistsAttackRef = useRef<HTMLAudioElement | null>(null);
+  const currentAttackSoundRef = useRef<HTMLAudioElement | null>(null);
+  
+  // Refs for magic attack sounds
+  const waterAttackRef = useRef<HTMLAudioElement | null>(null);
+  const fireAttackRef = useRef<HTMLAudioElement | null>(null);
+  const loveAttackRef = useRef<HTMLAudioElement | null>(null);
+  const currentMagicSoundRef = useRef<HTMLAudioElement | null>(null);
 
-  // Initialize background music
+  // Initialize audio
   useEffect(() => {
-    // Create audio elements
+    // Create audio elements for background music
     backgroundMusicRef.current = new Audio('/models/bg.mp3');
     backgroundMusicRef.current.loop = true;
     backgroundMusicRef.current.volume = 0.6;
@@ -41,8 +56,35 @@ function Game() {
     bossMusicRef.current.loop = true;
     bossMusicRef.current.volume = 0.7;
     
+    // Create audio elements for weapon attack sounds
+    swordAttackRef.current = new Audio('/models/attack-sword.mp3');
+    swordAttackRef.current.loop = true;
+    swordAttackRef.current.volume = 0.5;
+    
+    axeAttackRef.current = new Audio('/models/attack-axe.mp3');
+    axeAttackRef.current.loop = true;
+    axeAttackRef.current.volume = 0.5;
+    
+    fistsAttackRef.current = new Audio('/models/attack-fists.mp3');
+    fistsAttackRef.current.loop = true;
+    fistsAttackRef.current.volume = 0.5;
+    
+    // Create audio elements for magic attack sounds at lower volume
+    waterAttackRef.current = new Audio('/models/attack-water.mp3');
+    waterAttackRef.current.loop = true;
+    waterAttackRef.current.volume = 0.3;
+    
+    fireAttackRef.current = new Audio('/models/attack-fire.mp3');
+    fireAttackRef.current.loop = true;
+    fireAttackRef.current.volume = 0.3;
+    
+    loveAttackRef.current = new Audio('/models/attack-love.mp3');
+    loveAttackRef.current.loop = true;
+    loveAttackRef.current.volume = 0.3;
+    
     // Clean up
     return () => {
+      // Stop and clean up background music
       if (backgroundMusicRef.current) {
         backgroundMusicRef.current.pause();
         backgroundMusicRef.current.src = '';
@@ -51,8 +93,159 @@ function Game() {
         bossMusicRef.current.pause();
         bossMusicRef.current.src = '';
       }
+      
+      // Stop and clean up attack sounds
+      if (swordAttackRef.current) {
+        swordAttackRef.current.pause();
+        swordAttackRef.current.src = '';
+      }
+      if (axeAttackRef.current) {
+        axeAttackRef.current.pause();
+        axeAttackRef.current.src = '';
+      }
+      if (fistsAttackRef.current) {
+        fistsAttackRef.current.pause();
+        fistsAttackRef.current.src = '';
+      }
+      
+      // Stop and clean up magic sounds
+      if (waterAttackRef.current) {
+        waterAttackRef.current.pause();
+        waterAttackRef.current.src = '';
+      }
+      if (fireAttackRef.current) {
+        fireAttackRef.current.pause();
+        fireAttackRef.current.src = '';
+      }
+      if (loveAttackRef.current) {
+        loveAttackRef.current.pause();
+        loveAttackRef.current.src = '';
+      }
     };
   }, []);
+  
+  // Effect to play weapon attack sounds when all items are selected
+  useEffect(() => {
+    // Stop current attack sound if there is one
+    if (currentAttackSoundRef.current) {
+      currentAttackSoundRef.current.pause();
+      currentAttackSoundRef.current = null;
+    }
+    
+    // If boss is defeated, don't play any attack sounds
+    if (bossDefeated) {
+      return;
+    }
+    
+    // Play the appropriate attack sound if weapon is selected and all items are collected
+    if (hasAllItems && gameState.weapon) {
+      let attackSound: HTMLAudioElement | null = null;
+      
+      if (gameState.weapon === 'sword' && swordAttackRef.current) {
+        attackSound = swordAttackRef.current;
+      } else if (gameState.weapon === 'axe' && axeAttackRef.current) {
+        attackSound = axeAttackRef.current;
+      } else if (gameState.weapon === 'fist' && fistsAttackRef.current) {
+        attackSound = fistsAttackRef.current;
+      }
+      
+      if (attackSound) {
+        attackSound.currentTime = 0;
+        attackSound.play().catch(error => {
+          console.log("Attack sound autoplay failed:", error);
+        });
+        currentAttackSoundRef.current = attackSound;
+      }
+    }
+    
+    // Cleanup function to stop attack sounds when component unmounts or when effect reruns
+    return () => {
+      if (currentAttackSoundRef.current) {
+        currentAttackSoundRef.current.pause();
+      }
+    };
+  }, [hasAllItems, gameState.weapon, bossDefeated]);
+  
+  // Effect to play magic attack sounds when all items are selected
+  useEffect(() => {
+    // Stop current magic sound if there is one
+    if (currentMagicSoundRef.current) {
+      currentMagicSoundRef.current.pause();
+      currentMagicSoundRef.current = null;
+    }
+    
+    // If boss is defeated, don't play any magic sounds
+    if (bossDefeated) {
+      return;
+    }
+    
+    // Play the appropriate magic sound if magic is selected and all items are collected
+    if (hasAllItems && gameState.magic) {
+      let magicSound: HTMLAudioElement | null = null;
+      
+      if (gameState.magic === 'water' && waterAttackRef.current) {
+        magicSound = waterAttackRef.current;
+      } else if (gameState.magic === 'fire' && fireAttackRef.current) {
+        magicSound = fireAttackRef.current;
+      } else if (gameState.magic === 'love' && loveAttackRef.current) {
+        magicSound = loveAttackRef.current;
+      }
+      
+      if (magicSound) {
+        magicSound.currentTime = 0;
+        magicSound.play().catch(error => {
+          console.log("Magic sound autoplay failed:", error);
+        });
+        currentMagicSoundRef.current = magicSound;
+      }
+    }
+    
+    // Cleanup function to stop magic sounds when component unmounts or when effect reruns
+    return () => {
+      if (currentMagicSoundRef.current) {
+        currentMagicSoundRef.current.pause();
+      }
+    };
+  }, [hasAllItems, gameState.magic, bossDefeated]);
+  
+  // Effect to stop attack sounds when boss is defeated
+  useEffect(() => {
+    if (bossHealth <= 0 && !bossDefeated) {
+      setBossDefeated(true);
+      
+      // Stop attack sound
+      if (currentAttackSoundRef.current) {
+        // Fade out the attack sound
+        const fadeInterval = setInterval(() => {
+          if (currentAttackSoundRef.current && currentAttackSoundRef.current.volume > 0.05) {
+            currentAttackSoundRef.current.volume -= 0.05;
+          } else {
+            clearInterval(fadeInterval);
+            if (currentAttackSoundRef.current) {
+              currentAttackSoundRef.current.pause();
+              currentAttackSoundRef.current = null;
+            }
+          }
+        }, 100);
+      }
+      
+      // Stop magic sound
+      if (currentMagicSoundRef.current) {
+        // Fade out the magic sound
+        const fadeMagicInterval = setInterval(() => {
+          if (currentMagicSoundRef.current && currentMagicSoundRef.current.volume > 0.03) {
+            currentMagicSoundRef.current.volume -= 0.03;
+          } else {
+            clearInterval(fadeMagicInterval);
+            if (currentMagicSoundRef.current) {
+              currentMagicSoundRef.current.pause();
+              currentMagicSoundRef.current = null;
+            }
+          }
+        }, 100);
+      }
+    }
+  }, [bossHealth, bossDefeated]);
   
   // Effect to switch music when boss appears
   useEffect(() => {
@@ -104,6 +297,25 @@ function Game() {
 
   const handleIntroComplete = () => {
     setShowIntro(false);
+  };
+  
+  // Function to update boss health
+  const updateBossHealth = (newHealth: number) => {
+    setBossHealth(newHealth);
+  };
+
+  const handleRestartGame = () => {
+    setGameState({
+      weapon: null,
+      armour: null,
+      magic: null,
+      position: { x: 0, z: 0 },
+      stage: 0,
+      collectedBlocks: []
+    });
+    setBossHealth(100);
+    setBossDefeated(false);
+    setShowIntro(true);
   };
 
   return (
@@ -159,15 +371,25 @@ function Game() {
         </group>
         
         <Bridge gameState={gameState} />
-        <Player gameState={gameState} setGameState={setGameState} playMusic={playMusic} />
+        <Player gameState={gameState} setGameState={setGameState} playMusic={playMusic} bossDefeated={bossDefeated} hasAllItems={hasAllItems} />
         
         {/* Render boss only when all items are collected */}
-        {hasAllItems && <Boss playerPosition={gameState.position} gameState={gameState} />}
+        {hasAllItems && (
+          <Boss 
+            playerPosition={gameState.position} 
+            gameState={gameState} 
+            bossHealth={bossHealth}
+            updateBossHealth={updateBossHealth}
+          />
+        )}
       </Canvas>
-      <UI gameState={gameState} />
+      <UI gameState={gameState} bossHealth={bossHealth} bossDefeated={bossDefeated} />
       
       {/* Intro Messages */}
       {showIntro && <IntroMessages onComplete={handleIntroComplete} />}
+      
+      {/* Victory Screen */}
+      {bossDefeated && <Victory onRestart={handleRestartGame} />}
       
       {/* Wynter logo link */}
       <a 

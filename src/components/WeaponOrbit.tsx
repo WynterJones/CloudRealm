@@ -6,12 +6,16 @@ import { WeaponType } from '../types/game';
 
 interface WeaponOrbitProps {
   weaponType: WeaponType;
+  bossDefeated?: boolean;
+  hasAllItems?: boolean;
 }
 
-function WeaponOrbit({ weaponType }: WeaponOrbitProps) {
+function WeaponOrbit({ weaponType, bossDefeated = false, hasAllItems = false }: WeaponOrbitProps) {
   const weaponRef = useRef<Group>(null);
   const { camera } = useThree();
   const [weaponModel, setWeaponModel] = useState<Group | null>(null);
+  const [isAttacking, setIsAttacking] = useState(false);
+  const [exitProgress, setExitProgress] = useState(0);
   
   // Load weapon model in an effect to avoid conditional hook issues
   useEffect(() => {
@@ -64,21 +68,56 @@ function WeaponOrbit({ weaponType }: WeaponOrbitProps) {
   
   // For animation effects
   const spinSpeed = 2.0; // Speed of spinning
+  const attackSpeed = 5.0; // Speed of attack animation
   
   // Animation frame - always called regardless of model loading status
   useFrame((state, delta) => {
     if (!weaponRef.current) return;
     
+    // Handle boss defeated exit animation
+    if (bossDefeated) {
+      // Increment exit progress
+      setExitProgress(prev => Math.min(prev + delta * 2, 1));
+      
+      // Animate weapon moving down and off screen
+      const exitY = screenY - exitProgress * 2;
+      weaponRef.current.position.set(screenX, exitY, screenZ);
+      weaponRef.current.rotation.z += delta * 5; // Spin rapidly as it falls
+      
+      // Make weapon a child of the camera
+      weaponRef.current.parent = camera;
+      return;
+    }
+    
     // Position weapon fixed relative to camera (screen space)
     weaponRef.current.position.set(screenX, screenY, screenZ);
     
-    // Rotate based on weapon type
-    if (weaponType !== 'fist') {
-      weaponRef.current.rotation.y += delta * spinSpeed;
-    } else {
-      // For fists, do a punching animation
+    // Toggle attack mode periodically
+    if (Math.random() < 0.01) {
+      setIsAttacking(prev => !prev && hasAllItems);
+    }
+    
+    if (isAttacking && hasAllItems) {
+      // Attack animation - move weapon back and forth
       const time = state.clock.getElapsedTime();
-      weaponRef.current.rotation.x = Math.sin(time * 5) * 0.3;
+      weaponRef.current.position.z = screenZ + Math.sin(time * attackSpeed) * 0.2;
+      
+      // Rotate based on weapon type during attack
+      if (weaponType === 'sword' || weaponType === 'axe') {
+        weaponRef.current.rotation.x = Math.sin(time * attackSpeed) * 0.3;
+      } else {
+        // For fists, do a punching animation
+        weaponRef.current.rotation.x = Math.sin(time * attackSpeed) * 0.5;
+      }
+    } else {
+      // Regular spinning animation
+      if (weaponType !== 'fist') {
+        weaponRef.current.rotation.y += delta * spinSpeed;
+      } else {
+        // For fists, do a milder rotation
+        const time = state.clock.getElapsedTime();
+        weaponRef.current.rotation.x = Math.sin(time * 3) * 0.2;
+      }
     }
     
     // Make weapon a child of the camera

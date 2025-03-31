@@ -10,9 +10,11 @@ interface PlayerProps {
   gameState: GameState;
   setGameState: (state: GameState) => void;
   playMusic: () => void;
+  bossDefeated?: boolean;
+  hasAllItems?: boolean;
 }
 
-function Player({ gameState, setGameState, playMusic }: PlayerProps) {
+function Player({ gameState, setGameState, playMusic, bossDefeated, hasAllItems }: PlayerProps) {
   const playerRef = useRef<Mesh>(null);
   const modelRef = useRef<Group>(null);
   const cameraRef = useRef<ThreePerspectiveCamera>(null);
@@ -380,6 +382,8 @@ function Player({ gameState, setGameState, playMusic }: PlayerProps) {
           {gameState.weapon && (
             <WeaponOrbit 
               weaponType={gameState.weapon} 
+              bossDefeated={bossDefeated}
+              hasAllItems={hasAllItems}
             />
           )}
           
@@ -387,6 +391,8 @@ function Player({ gameState, setGameState, playMusic }: PlayerProps) {
           {gameState.armour && (
             <ArmourOrbit 
               armourType={gameState.armour} 
+              bossDefeated={bossDefeated}
+              hasAllItems={hasAllItems}
             />
           )}
         </group>
