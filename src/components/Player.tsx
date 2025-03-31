@@ -73,6 +73,7 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
   // Expose methods to parent component
   useImperativeHandle(ref, () => ({
     handleMobileMove: (x: number, y: number) => {
+      console.log(`Player received mobile input: (${x}, ${y})`);
       mobileVelocity.current.set(x, y);
       mobileInputActive.current = true;
       
@@ -82,6 +83,7 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
       }
     },
     clearMobileInput: () => {
+      console.log('Player clearing mobile input');
       mobileVelocity.current.set(0, 0);
       mobileInputActive.current = false;
     }
@@ -268,6 +270,7 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
       
       // Handle mobile input
       if (mobileInputActive.current) {
+        console.log(`Using mobile velocity: (${mobileVelocity.current.x}, ${mobileVelocity.current.y})`);
         targetVelocity.current.x = mobileVelocity.current.x * speed;
         targetVelocity.current.y = mobileVelocity.current.y * speed;
       }
@@ -275,14 +278,21 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
       // Normalize diagonal movement
       if (targetVelocity.current.length() > 0) {
         targetVelocity.current.normalize().multiplyScalar(speed);
+        console.log(`Final target velocity: (${targetVelocity.current.x}, ${targetVelocity.current.y})`);
       }
       
       // Apply acceleration/deceleration
-      velocity.current.lerp(targetVelocity.current, (keys.size || mobileInputActive.current) ? acceleration : deceleration);
+      const accelerationFactor = (keys.size || mobileInputActive.current) ? acceleration : deceleration;
+      velocity.current.lerp(targetVelocity.current, accelerationFactor);
       
       // Calculate new position
       const newX = Math.max(Math.min(positionRef.current.x + velocity.current.x, 1.9), -1.9);
       const newZ = Math.max(Math.min(positionRef.current.z + velocity.current.y, 300), -20);
+      
+      // Log position changes when using mobile input
+      if (mobileInputActive.current) {
+        console.log(`New position: (${newX}, ${newZ})`);
+      }
       
       // Update position
       updatePosition(newX, newZ);
