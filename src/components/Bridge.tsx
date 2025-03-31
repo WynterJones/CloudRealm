@@ -168,9 +168,14 @@ function Bridge({ gameState }: BridgeProps) {
       ? { labelText: 'Return' } 
       : { labelText: 'Go Back' };
     
-    // Position start portal behind the player's starting position (negative Z)
-    // Y position is 0.1 to place it on top of the bridge surface
-    manager.createStartPortal(0, 0.1, -5, 2.5, startPortalOptions);
+    // Position start portal within the new player movement range (-20 to 250)
+    // Set to z=-10 so it's clearly behind the player but within movement range
+    const startPortal = manager.createStartPortal(0, 0.1, -10, 2.5, startPortalOptions);
+    
+    // Rotate the portal to face the player
+    if (startPortal) {
+      startPortal.rotation.y = Math.PI; // Rotate 180 degrees to face toward positive Z
+    }
     
     // Create exit portal after the third stage (weapon, armor, magic stages)
     // Stage positions start at z=10 with 15 unit intervals between stages

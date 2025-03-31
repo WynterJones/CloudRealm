@@ -238,7 +238,7 @@ function Player({ gameState, setGameState, playMusic, bossDefeated, hasAllItems 
       
       // Calculate new position
       const newX = Math.max(Math.min(positionRef.current.x + velocity.current.x, 1.9), -1.9);
-      const newZ = Math.max(Math.min(positionRef.current.z + velocity.current.y, 250), 0);
+      const newZ = Math.max(Math.min(positionRef.current.z + velocity.current.y, 250), -20);
       
       // Update position - only position! Not other properties
       updatePosition(newX, newZ);
