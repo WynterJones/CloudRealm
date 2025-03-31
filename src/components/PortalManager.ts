@@ -26,7 +26,7 @@ export class PortalManager {
   private exitPortal: PortalWrapper | null;
   private startPortalBox: THREE.Box3 | null;
   private exitPortalBox: THREE.Box3 | null;
-  private playerCheckInterval: NodeJS.Timeout | null;
+  private playerCheckInterval: ReturnType<typeof setTimeout> | null;
 
   constructor(scene: THREE.Scene, camera: THREE.Camera, socket: any) {
     this.scene = scene;
@@ -346,44 +346,104 @@ export class PortalManager {
       if (!url.startsWith("http://") && !url.startsWith("https://")) {
         url = "https://" + url;
       }
+
+      // Copy all current parameters except 'ref' to preserve game state when returning
       const currentParams = new URLSearchParams(window.location.search);
       const newParams = new URLSearchParams();
       for (const [key, value] of currentParams) {
         if (key !== "ref") {
-          // Skip ref param since it's in the base URL
           newParams.append(key, value);
         }
       }
+
       const paramString = newParams.toString();
       window.location.href = url + (paramString ? "?" + paramString : "");
+    } else {
+      // If no ref parameter, show an error message
+      this.showNoReturnMessage();
+    }
+  }
+
+  // Display a message when there's nowhere to return to
+  showNoReturnMessage(): void {
+    // Create message element if it doesn't exist
+    if (!document.getElementById("portal-message")) {
+      const messageEl = document.createElement("div");
+      messageEl.id = "portal-message";
+      messageEl.style.position = "fixed";
+      messageEl.style.top = "20%";
+      messageEl.style.left = "50%";
+      messageEl.style.transform = "translateX(-50%)";
+      messageEl.style.padding = "15px 30px";
+      messageEl.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
+      messageEl.style.color = "white";
+      messageEl.style.borderRadius = "5px";
+      messageEl.style.fontFamily = "Arial, sans-serif";
+      messageEl.style.fontSize = "18px";
+      messageEl.style.zIndex = "1000";
+      messageEl.style.textAlign = "center";
+      messageEl.innerText = "No destination to return to...";
+
+      document.body.appendChild(messageEl);
+
+      // Remove message after 3 seconds
+      setTimeout(() => {
+        const msg = document.getElementById("portal-message");
+        if (msg) {
+          msg.style.opacity = "0";
+          msg.style.transition = "opacity 0.5s ease";
+
+          setTimeout(() => {
+            if (msg && msg.parentNode) {
+              msg.parentNode.removeChild(msg);
+            }
+          }, 500);
+        }
+      }, 3000);
     }
   }
 
   // Handle exit portal interaction
   handleExitPortalEntry(): void {
     // Create parameters for the next page
-    const currentParams = new URLSearchParams(window.location.search);
     const newParams = new URLSearchParams();
-    newParams.append("portal", "true"); // Convert boolean to string
 
-    // If socket available, add username
+    // Essential parameters
+    newParams.append("portal", "true"); // Indicate this is a portal entrance
+
+    // Player information - get from socket if available
     if (this.socket && this.socket.id) {
-      const player = this.socket.id;
-      newParams.append("username", player);
+      newParams.append("username", this.socket.id);
+    } else {
+      // Generate a random username if not available
+      newParams.append(
+        "username",
+        "player_" + Math.floor(Math.random() * 10000)
+      );
     }
 
+    // Set player color to white as default
     newParams.append("color", "white");
 
-    // Copy other params from current URL
+    // Add current URL as reference for return portal
+    const currentUrl = window.location.host + window.location.pathname;
+    newParams.append("ref", currentUrl);
+
+    // Add additional optional parameters if available
+    // Speed parameters - defaulting to reasonable values
+    newParams.append("speed", "3"); // Default walking speed
+
+    // Copy any other useful parameters from current URL
+    const currentParams = new URLSearchParams(window.location.search);
     for (const [key, value] of currentParams) {
-      if (!newParams.has(key)) {
+      if (!newParams.has(key) && key !== "portal") {
         newParams.append(key, value);
       }
     }
 
     const paramString = newParams.toString();
     const nextPage =
-      "https://portal.pieter.com" + (paramString ? "?" + paramString : "");
+      "http://portal.pieter.com" + (paramString ? "?" + paramString : "");
 
     // Create hidden iframe to preload next page
     if (!document.getElementById("preloadFrame")) {

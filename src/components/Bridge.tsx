@@ -1,8 +1,9 @@
-import React, { useRef, useState } from 'react';
-import { Mesh, Vector3, DoubleSide, Shape, ExtrudeGeometry, RepeatWrapping, TextureLoader, MeshStandardMaterial, Texture } from 'three';
+import React, { useRef, useState, useEffect } from 'react';
+import { Mesh, Vector3, DoubleSide, Shape, ExtrudeGeometry, RepeatWrapping, TextureLoader, MeshStandardMaterial, Texture, Scene } from 'three';
 import { Text, useTexture, Html } from '@react-three/drei';
-import { useFrame, useLoader } from '@react-three/fiber';
+import { useFrame, useLoader, useThree } from '@react-three/fiber';
 import { GameState } from '../types/game';
+import { PortalManager } from './PortalManager';
 
 interface BridgeProps {
   gameState: GameState;
@@ -134,6 +135,8 @@ function RailingMesh({ position, texture }: RailingMeshProps) {
 
 function Bridge({ gameState }: BridgeProps) {
   const bridgeRef = useRef<Mesh>(null);
+  const { scene, camera } = useThree();
+  const [portalManager, setPortalManager] = useState<PortalManager | null>(null);
   
   // Load and configure textures
   const groundTexture = useLoader(TextureLoader, '/models/ground.png');
@@ -149,6 +152,53 @@ function Bridge({ gameState }: BridgeProps) {
   
   // Improve texture quality
   groundTexture.anisotropy = 16;
+
+  // Initialize portals on mount
+  useEffect(() => {
+    // Create portal manager - using an empty object for socket since it's optional
+    const manager = new PortalManager(scene, camera, {});
+    
+    // Get ref URL from query parameters if it exists
+    const urlParams = new URLSearchParams(window.location.search);
+    const comingFromPortal = urlParams.get('portal') === 'true';
+    
+    // Create start portal at the beginning of the bridge
+    // If coming from a portal, this acts as the return portal
+    const startPortalOptions = comingFromPortal 
+      ? { labelText: 'Return' } 
+      : { labelText: 'Go Back' };
+    
+    // Position start portal behind the player's starting position (negative Z)
+    // Y position is 0.1 to place it on top of the bridge surface
+    manager.createStartPortal(0, 0.1, -5, 2.5, startPortalOptions);
+    
+    // Create exit portal after the third stage (weapon, armor, magic stages)
+    // Stage positions start at z=10 with 15 unit intervals between stages
+    // So placing at z=55 puts it past the third stage
+    manager.createExitPortal(0, 0.1, 55, 2.5, { labelText: 'To Vibeverse' });
+    
+    setPortalManager(manager);
+    
+    return () => {
+      // Clean up if needed
+    };
+  }, [scene, camera]);
+  
+  // Check for portal collisions each frame
+  useFrame(() => {
+    if (portalManager && gameState.position) {
+      // Convert gameState position to object with y (assuming y is character height)
+      const playerPos = {
+        position: {
+          x: gameState.position.x,
+          y: 1, // Assuming character height is around 1 unit
+          z: gameState.position.z
+        }
+      };
+      
+      portalManager.checkPortalCollisions(playerPos);
+    }
+  });
 
   // Card data for each stage - lowered y position to 0.1 from 0.3
   const stageData: StageData[] = [
@@ -183,22 +233,22 @@ function Bridge({ gameState }: BridgeProps) {
       {/* Main bridge surface */}
       <mesh
         ref={bridgeRef}
-        position={[0, -0.5, 25]}
+        position={[0, -0.5, 20]}
         rotation={[0, 0, 0]}
       >
-        <boxGeometry args={[4, 1, 500]} />
+        <boxGeometry args={[4, 1, 510]} />
         <meshStandardMaterial map={groundTexture} />
       </mesh>
       
       {/* Left curb */}
-      <mesh position={[-2.1, 0.01, 25]}>
-        <boxGeometry args={[0.2, 0.3, 500]} />
+      <mesh position={[-2.1, 0.01, 20]}>
+        <boxGeometry args={[0.2, 0.3, 510]} />
         <meshStandardMaterial map={railingTexture} color="#888888" side={DoubleSide} />
       </mesh>
       
       {/* Right curb */}
-      <mesh position={[2.1, 0.01, 25]}>
-        <boxGeometry args={[0.2, 0.3, 500]} />
+      <mesh position={[2.1, 0.01, 20]}>
+        <boxGeometry args={[0.2, 0.3, 510]} />
         <meshStandardMaterial map={railingTexture} color="#888888" side={DoubleSide} />
       </mesh>
       
