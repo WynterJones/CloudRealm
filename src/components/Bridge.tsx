@@ -179,8 +179,8 @@ function Bridge({ gameState }: BridgeProps) {
     
     // Create exit portal after the third stage (weapon, armor, magic stages)
     // Stage positions start at z=10 with 15 unit intervals between stages
-    // Now positioning it much further down the bridge (5x further than before)
-    manager.createExitPortal(0, 0.1, 275, 2.5, { labelText: 'To Vibeverse' });
+    // Positioning it closer but still after all the stages
+    manager.createExitPortal(0, 0.1, 100, 2.5, { labelText: 'To Vibeverse' });
     
     setPortalManager(manager);
     

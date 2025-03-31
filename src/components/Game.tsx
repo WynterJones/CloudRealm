@@ -11,6 +11,14 @@ import IntroMessages from './IntroMessages.tsx';
 import Victory from './Victory.tsx';
 import { GameState } from '../types/game';
 
+// Extend Window interface to include our global game state
+declare global {
+  interface Window {
+    gameState?: GameState;
+    setGameState?: (state: GameState) => void;
+  }
+}
+
 function Game() {
   const [gameState, setGameState] = useState<GameState>({
     weapon: null,
@@ -18,8 +26,21 @@ function Game() {
     magic: null,
     position: { x: 0, z: 0 },
     stage: 0,
-    collectedBlocks: []
+    collectedBlocks: [],
+    isInvulnerable: false
   });
+  
+  // Expose gameState and setGameState to window for Victory component
+  useEffect(() => {
+    window.gameState = gameState;
+    window.setGameState = setGameState;
+    
+    return () => {
+      // Clean up when component unmounts
+      window.gameState = undefined;
+      window.setGameState = undefined;
+    };
+  }, [gameState, setGameState]);
   
   const [showIntro, setShowIntro] = useState(true);
   const [bossHealth, setBossHealth] = useState(100);
@@ -65,28 +86,28 @@ function Game() {
     // Create audio elements for weapon attack sounds
     swordAttackRef.current = new Audio('/models/attack-sword.mp3');
     swordAttackRef.current.loop = true;
-    swordAttackRef.current.volume = 0.5;
+    swordAttackRef.current.volume =0.9;
     
     axeAttackRef.current = new Audio('/models/attack-axe.mp3');
     axeAttackRef.current.loop = true;
-    axeAttackRef.current.volume = 0.5;
+    axeAttackRef.current.volume = 0.9;
     
     fistsAttackRef.current = new Audio('/models/attack-fists.mp3');
     fistsAttackRef.current.loop = true;
-    fistsAttackRef.current.volume = 0.5;
+    fistsAttackRef.current.volume = 0.9;
     
     // Create audio elements for magic attack sounds at lower volume
     waterAttackRef.current = new Audio('/models/attack-water.mp3');
     waterAttackRef.current.loop = true;
-    waterAttackRef.current.volume = 0.3;
+    waterAttackRef.current.volume = 0.9;
     
     fireAttackRef.current = new Audio('/models/attack-fire.mp3');
     fireAttackRef.current.loop = true;
-    fireAttackRef.current.volume = 0.3;
+    fireAttackRef.current.volume = 0.9;
     
     loveAttackRef.current = new Audio('/models/attack-love.mp3');
     loveAttackRef.current.loop = true;
-    loveAttackRef.current.volume = 0.3;
+    loveAttackRef.current.volume = 0.9;
     
     // Clean up
     return () => {
@@ -353,6 +374,19 @@ function Game() {
   };
 
   const handleRestartGame = () => {
+    // Force teleport player to the start position
+    if (window.gameState) {
+      window.gameState = {
+        weapon: null,
+        armour: null,
+        magic: null,
+        position: { x: 0, z: 0 },
+        stage: 0,
+        collectedBlocks: [],
+        isInvulnerable: true
+      };
+    }
+    
     // Reset game state
     setGameState({
       weapon: null,
@@ -360,8 +394,29 @@ function Game() {
       magic: null,
       position: { x: 0, z: 0 },
       stage: 0,
-      collectedBlocks: []
+      collectedBlocks: [],
+      isInvulnerable: true
     });
+    
+    // Remove invulnerability after a 1-second delay
+    setTimeout(() => {
+      // Update both local gameState and window.gameState
+      setGameState(prevState => ({
+        ...prevState,
+        isInvulnerable: false
+      }));
+      
+      // Make sure window.gameState is also updated with invulnerability off
+      if (window.gameState && window.setGameState) {
+        window.setGameState({
+          ...window.gameState,
+          isInvulnerable: false
+        });
+      }
+      
+      console.log("Collision detection re-enabled after restart");
+    }, 1000);
+    
     setBossHealth(100);
     setBossDefeated(false);
     setShowIntro(true);

@@ -97,7 +97,7 @@ function Player({ gameState, setGameState, playMusic, bossDefeated, hasAllItems 
     
     // Play meow sound when a card is selected
     const meowSound = new Audio('/models/meow.mp3');
-    meowSound.volume = 0.7;
+    meowSound.volume = 0.6;
     meowSound.play();
     
     // Play weapon-specific voice when weapon is selected
@@ -155,7 +155,8 @@ function Player({ gameState, setGameState, playMusic, bossDefeated, hasAllItems 
       magic: magicRef.current,
       stage: stageRef.current,
       position: positionRef.current,
-      collectedBlocks: [...gameState.collectedBlocks, { x: cardX, z: cardZ }]
+      collectedBlocks: [...gameState.collectedBlocks, { x: cardX, z: cardZ }],
+      isInvulnerable: gameState.isInvulnerable
     };
     
     setGameState(newState);
@@ -192,7 +193,8 @@ function Player({ gameState, setGameState, playMusic, bossDefeated, hasAllItems 
       magic: magicRef.current,
       stage: stageRef.current,
       position: { x: newX, z: newZ },
-      collectedBlocks: gameState.collectedBlocks
+      collectedBlocks: gameState.collectedBlocks,
+      isInvulnerable: gameState.isInvulnerable
     });
   }, [gameState, setGameState]);
 
@@ -301,6 +303,12 @@ function Player({ gameState, setGameState, playMusic, bossDefeated, hasAllItems 
         return;
       }
 
+      // Don't check for collisions when player is invulnerable (during teleportation)
+      if (gameState.isInvulnerable) {
+        updateCamera();
+        return;
+      }
+
       // Check for collision with any card
       if (stageRef.current < stageCardPositions.length) {
         const currentStageCards = stageCardPositions[stageRef.current];
@@ -346,7 +354,8 @@ function Player({ gameState, setGameState, playMusic, bossDefeated, hasAllItems 
           magic: null,
           position: { x: 0, z: 0 },
           stage: 0,
-          collectedBlocks: []
+          collectedBlocks: [],
+          isInvulnerable: false
         });
       }
     }

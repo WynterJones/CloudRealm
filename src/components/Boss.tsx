@@ -22,6 +22,7 @@ function Boss({ playerPosition, gameState, bossHealth, updateBossHealth }: BossP
   const [showDamageEffect, setShowDamageEffect] = useState(false);
   const [showBossNameAnimation, setShowBossNameAnimation] = useState(false);
   const damageRef = useRef(0);
+  const bossAudioRef = useRef<HTMLAudioElement | null>(null);
   
   // Effect particles for different magic types
   const [rainParticles, setRainParticles] = useState<Points | null>(null);
@@ -45,9 +46,67 @@ function Boss({ playerPosition, gameState, bossHealth, updateBossHealth }: BossP
     baseDamage: 5
   });
   
-  // Target position in front of player
-  const targetDistance = 20; // 20 feet in front of the player
+  // Dynamic movement tracking
+  const movementState = useRef({
+    baseDistance: 20, // Base distance to maintain from player
+    currentDistance: 20, // Current target distance
+    minDistance: 10, // Minimum distance boss can approach
+    maxDistance: 25, // Maximum retreat distance
+    isApproaching: false, // Whether boss is currently approaching player
+    nextMovementChange: 0, // Time to change movement direction
+    movementChangeInterval: [3, 7], // Range for movement change interval in seconds
+    approachSpeed: 1.2, // Multiplier for approach speed
+    retreatSpeed: 0.8 // Multiplier for retreat speed
+  });
+  
+  // Target position in front of player (now dynamic)
   const targetHeight = 2.5; // Hover height above the bridge
+
+  // Setup boss audio
+  useEffect(() => {
+    // Create audio element for boss sound
+    const audio = new Audio('/models/brain.mp3');
+    audio.loop = true;
+    audio.volume = 0.5;
+    bossAudioRef.current = audio;
+    
+    // Clean up audio when component unmounts
+    return () => {
+      if (bossAudioRef.current) {
+        bossAudioRef.current.pause();
+        bossAudioRef.current = null;
+      }
+    };
+  }, []);
+  
+  // Handle audio playback based on boss state
+  useEffect(() => {
+    // Start playing when boss has finished descending
+    if (!isDescending && !isDying && !isDefeated && bossAudioRef.current) {
+      bossAudioRef.current.play().catch(err => {
+        console.log('Failed to play boss audio:', err);
+      });
+    }
+    
+    // Stop audio when boss is defeated
+    if ((isDying || isDefeated) && bossAudioRef.current) {
+      // Gradually fade out audio
+      const fadeAudio = setInterval(() => {
+        if (bossAudioRef.current) {
+          if (bossAudioRef.current.volume > 0.05) {
+            bossAudioRef.current.volume -= 0.05;
+          } else {
+            bossAudioRef.current.pause();
+            clearInterval(fadeAudio);
+          }
+        } else {
+          clearInterval(fadeAudio);
+        }
+      }, 100);
+      
+      return () => clearInterval(fadeAudio);
+    }
+  }, [isDescending, isDying, isDefeated]);
 
   // Calculate damage based on player equipment
   const calculateDamage = () => {
@@ -247,8 +306,55 @@ function Boss({ playerPosition, gameState, bossHealth, updateBossHealth }: BossP
       return;
     }
     
-    // Calculate target position (20 feet in front of player)
-    const playerForwardZ = playerPosition.z + targetDistance;
+    // Update dynamic movement distance once not descending
+    if (!isDescending) {
+      const currentTime = state.clock.getElapsedTime();
+      
+      // Check if it's time to change movement direction
+      if (currentTime > movementState.current.nextMovementChange) {
+        // Toggle approach/retreat mode
+        movementState.current.isApproaching = !movementState.current.isApproaching;
+        
+        // Set next change time
+        const [min, max] = movementState.current.movementChangeInterval;
+        const nextInterval = min + Math.random() * (max - min);
+        movementState.current.nextMovementChange = currentTime + nextInterval;
+        
+        // Occasionally perform a quick dart movement
+        if (Math.random() < 0.3) {
+          // Quick dart is faster approach followed by faster retreat
+          if (movementState.current.isApproaching) {
+            movementState.current.approachSpeed = 2.0; // Faster approach
+          } else {
+            movementState.current.retreatSpeed = 1.5; // Faster retreat
+          }
+        } else {
+          // Reset to normal speeds
+          movementState.current.approachSpeed = 1.2;
+          movementState.current.retreatSpeed = 0.8;
+        }
+      }
+      
+      // Gradually update the current distance based on approach/retreat
+      if (movementState.current.isApproaching) {
+        // Move closer to the player
+        movementState.current.currentDistance = MathUtils.lerp(
+          movementState.current.currentDistance,
+          movementState.current.minDistance,
+          delta * movementState.current.approachSpeed
+        );
+      } else {
+        // Move away from the player
+        movementState.current.currentDistance = MathUtils.lerp(
+          movementState.current.currentDistance,
+          movementState.current.maxDistance,
+          delta * movementState.current.retreatSpeed
+        );
+      }
+    }
+    
+    // Calculate target position with dynamic distance
+    const playerForwardZ = playerPosition.z + movementState.current.currentDistance;
     
     // Calculate damage and attack at intervals if boss is active
     if (!isDescending && !isDying && gameState.magic) {
@@ -296,10 +402,10 @@ function Boss({ playerPosition, gameState, bossHealth, updateBossHealth }: BossP
         delta * 3
       );
     } else {
-      // Stay in front of player with smooth following
+      // Stay in front of player with smooth following - use dynamic distance
       bossRef.current.position.x = MathUtils.lerp(
         bossRef.current.position.x, 
-        playerPosition.x, 
+        playerPosition.x + (Math.sin(state.clock.getElapsedTime() * 0.8) * 3), // Add slight side-to-side movement
         delta * 5
       );
       bossRef.current.position.z = MathUtils.lerp(
@@ -308,9 +414,9 @@ function Boss({ playerPosition, gameState, bossHealth, updateBossHealth }: BossP
         delta * 5
       );
       
-      // Bobbing up and down
-      const bobHeight = 0.5;
-      const bobSpeed = 0.5;
+      // Bobbing up and down with varying height based on approach/retreat
+      const bobHeight = movementState.current.isApproaching ? 0.8 : 0.5; // More vertical movement when approaching
+      const bobSpeed = movementState.current.isApproaching ? 0.8 : 0.5;  // Faster bobbing when approaching
       bossRef.current.position.y = targetHeight + 
         Math.sin(state.clock.getElapsedTime() * bobSpeed) * bobHeight;
       

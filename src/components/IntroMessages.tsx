@@ -5,12 +5,19 @@ interface IntroMessagesProps {
 }
 
 const IntroMessages = ({ onComplete }: IntroMessagesProps) => {
+  // Check if there's a ref parameter in the URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const hasRefParam = urlParams.has('ref');
+
+  // Define messages array conditionally based on ref parameter
   const messages = [
-    "Welcome to Cloud Realm...",
+    "Welcome to the Cloud Realm...",
     "Use WASD to move around...",
-    "Turn around to return to the portal...",
+    // Only include the return portal message if there's a ref parameter
+    ...(hasRefParam ? ["Turn around to return to the portal..."] : []),
     "Select a Weapon, Protection, and Magic...",
-    "...and Fight Your Own Mind..."
+    "...and Fight Your Own Mind...",
+    "...if you dare... and continue into the Vibeverse..."
   ];
 
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);

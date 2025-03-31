@@ -16,6 +16,51 @@ const Victory = ({ onComplete, onRestart }: VictoryProps) => {
   const handleKeyPress = useCallback((e: KeyboardEvent) => {
     if (e.code === 'Space' && showTypewriter && onRestart) {
       setFadeOut(true);
+      
+      // Immediately teleport the player back to the start position before executing onRestart
+      // Access the game state through the window object to avoid dependency issues
+      if (window.gameState && window.setGameState) {
+        // Force complete reset of player position and state, keeping invulnerable
+        window.setGameState({
+          weapon: null,
+          armour: null,
+          magic: null,
+          position: { x: 0, z: 0 },
+          stage: 0,
+          collectedBlocks: [],
+          isInvulnerable: true
+        });
+        
+        // Add a second reset to ensure position is properly set
+        // This covers edge cases where the first reset might not fully apply
+        setTimeout(() => {
+          if (window.gameState && window.setGameState) {
+            window.setGameState({
+              weapon: null,
+              armour: null,
+              magic: null,
+              position: { x: 0, z: 0 },
+              stage: 0,
+              collectedBlocks: [],
+              isInvulnerable: true
+            });
+          }
+        }, 100);
+        
+        // Reset invulnerability after exactly 1 second to ensure player is fully teleported
+        // This ensures collision detection works for card selection
+        setTimeout(() => {
+          if (window.gameState && window.setGameState) {
+            window.setGameState({
+              ...window.gameState,
+              isInvulnerable: false
+            });
+            console.log("Collision detection re-enabled from Victory component");
+          }
+        }, 1000);
+      }
+      
+      // Then execute the restart handler after a delay for the fade effect
       setTimeout(() => {
         onRestart();
       }, 1000);

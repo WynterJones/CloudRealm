@@ -143,22 +143,26 @@ export class PortalManager {
       const context = canvas.getContext("2d");
       if (!context) return wrapper; // Skip label creation if context is null
 
-      canvas.width = 512;
-      canvas.height = 64;
+      // Increase canvas size for larger text
+      canvas.width = 1024;
+      canvas.height = 128;
 
       // Get label color from options or use portal color
       const labelColor =
         options.labelColor || (color === 0xff0000 ? "#ff0000" : "#00ff00");
 
       context.fillStyle = labelColor;
-      context.font = "bold 32px Arial";
+
+      // Larger font size for the exit portal
+      const fontSize = color === 0xff0000 ? 32 : 48;
+      context.font = `bold ${fontSize}px Arial`;
       context.textAlign = "center";
       context.fillText(labelText, canvas.width / 2, canvas.height / 2);
 
       const texture = new THREE.CanvasTexture(canvas);
       const labelGeometry = new THREE.PlaneGeometry(
         radius * 1.6,
-        radius * 0.25
+        radius * 0.35
       );
       const labelMaterial = new THREE.MeshBasicMaterial({
         map: texture,
@@ -167,7 +171,19 @@ export class PortalManager {
       });
 
       const label = new THREE.Mesh(labelGeometry, labelMaterial);
-      label.position.y = radius * 1.5; // Position label above the portal
+
+      // Position label based on portal type
+      if (color === 0xff0000) {
+        // Entrance portal - position above
+        label.position.y = radius * 1.5;
+      } else {
+        // Exit portal - position closer and in front
+        label.position.y = radius * 1.2;
+        label.position.z = radius * 0.1; // Slightly in front of portal
+        // Rotate text 180 degrees around Y axis to face correct direction
+        label.rotation.y = Math.PI;
+      }
+
       portal.add(label);
     }
 
