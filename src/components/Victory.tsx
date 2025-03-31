@@ -28,7 +28,7 @@ const Victory = ({ onComplete, onRestart }: VictoryProps) => {
       setTimeout(() => {
         setVisible(false);
       }, 1000);
-    }, 6000);
+    }, 12000);
     
     return () => {
       console.log("Victory component UNMOUNTED");
