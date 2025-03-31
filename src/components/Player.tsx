@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, useState } from 'react';
+import { useRef, useEffect, useCallback, useState, forwardRef, useImperativeHandle } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Mesh, Vector3, Vector2, PerspectiveCamera as ThreePerspectiveCamera, Quaternion, MathUtils, Group, SphereGeometry, MeshBasicMaterial } from 'three';
 import { PerspectiveCamera, useGLTF, Text } from '@react-three/drei';
@@ -12,9 +12,23 @@ interface PlayerProps {
   playMusic: () => void;
   bossDefeated?: boolean;
   hasAllItems?: boolean;
+  bossHealth: number;
+  onMobileMove?: (x: number, y: number) => void;
 }
 
-function Player({ gameState, setGameState, playMusic, bossDefeated, hasAllItems }: PlayerProps) {
+export interface PlayerHandle {
+  handleMobileMove: (x: number, y: number) => void;
+}
+
+const Player = forwardRef<PlayerHandle, PlayerProps>(({ 
+  gameState, 
+  setGameState, 
+  playMusic, 
+  bossDefeated, 
+  hasAllItems, 
+  bossHealth, 
+  onMobileMove 
+}, ref) => {
   const playerRef = useRef<Mesh>(null);
   const modelRef = useRef<Group>(null);
   const cameraRef = useRef<ThreePerspectiveCamera>(null);
@@ -51,6 +65,23 @@ function Player({ gameState, setGameState, playMusic, bossDefeated, hasAllItems 
 
   // Track if music has been played yet
   const musicStartedRef = useRef(false);
+
+  const mobileVelocity = useRef(new Vector2(0, 0));
+  const mobileInputActive = useRef(false);
+
+  // Expose methods to parent component
+  useImperativeHandle(ref, () => ({
+    handleMobileMove: (x: number, y: number) => {
+      mobileVelocity.current.set(x, y);
+      mobileInputActive.current = true;
+      
+      // Play music on first movement if not already started
+      if (!musicStartedRef.current) {
+        playMusic();
+        musicStartedRef.current = true;
+      }
+    }
+  }));
 
   // Define card positions for all stages - moved outside the frame loop for visualization
   const stageCardPositions = [
@@ -225,10 +256,17 @@ function Player({ gameState, setGameState, playMusic, bossDefeated, hasAllItems 
     const updateMovement = () => {
       targetVelocity.current.set(0, 0);
       
+      // Handle keyboard input
       if (keys.has('a')) targetVelocity.current.x = speed;
       if (keys.has('d')) targetVelocity.current.x = -speed;
       if (keys.has('w')) targetVelocity.current.y = speed;
       if (keys.has('s')) targetVelocity.current.y = -speed;
+      
+      // Handle mobile input
+      if (mobileInputActive.current) {
+        targetVelocity.current.x = mobileVelocity.current.x * speed;
+        targetVelocity.current.y = mobileVelocity.current.y * speed;
+      }
       
       // Normalize diagonal movement
       if (targetVelocity.current.length() > 0) {
@@ -236,13 +274,13 @@ function Player({ gameState, setGameState, playMusic, bossDefeated, hasAllItems 
       }
       
       // Apply acceleration/deceleration
-      velocity.current.lerp(targetVelocity.current, keys.size ? acceleration : deceleration);
+      velocity.current.lerp(targetVelocity.current, (keys.size || mobileInputActive.current) ? acceleration : deceleration);
       
       // Calculate new position
       const newX = Math.max(Math.min(positionRef.current.x + velocity.current.x, 1.9), -1.9);
       const newZ = Math.max(Math.min(positionRef.current.z + velocity.current.y, 300), -20);
       
-      // Update position - only position! Not other properties
+      // Update position
       updatePosition(newX, newZ);
       
       // Calculate rotation based on movement direction
@@ -408,7 +446,7 @@ function Player({ gameState, setGameState, playMusic, bossDefeated, hasAllItems 
       </mesh>
     </>
   );
-}
+});
 
 useGLTF.preload('/models/player.glb');
 

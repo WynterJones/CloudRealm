@@ -5,6 +5,7 @@ interface UIProps {
   gameState: GameState;
   bossHealth: number;
   bossDefeated?: boolean;
+  onMobileMove?: (x: number, y: number) => void;
 }
 
 // Helper function to capitalize the first letter
@@ -13,14 +14,77 @@ const capitalize = (text: string | null): string => {
   return text.charAt(0).toUpperCase() + text.slice(1);
 };
 
-function UI({ gameState, bossHealth, bossDefeated = false }: UIProps) {
+function UI({ gameState, bossHealth, bossDefeated = false, onMobileMove }: UIProps) {
   const [showBossNameAnimation, setShowBossNameAnimation] = useState(false);
   const [showBossUI, setShowBossUI] = useState(false);
   const [playerHealth, setPlayerHealth] = useState(100);
+  const [isMobile, setIsMobile] = useState(false);
+  const [touchActive, setTouchActive] = useState(false);
+  const joystickRef = useRef<HTMLDivElement>(null);
   const lastHitTime = useRef(0);
   const minPlayerHealth = 30; // Player health won't drop below this
   const hasAllItems = gameState.weapon !== null && gameState.armour !== null && gameState.magic !== null;
   
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!isMobile || !joystickRef.current) return;
+    
+    const touch = e.touches[0];
+    const rect = joystickRef.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    
+    const deltaX = touch.clientX - centerX;
+    const deltaY = touch.clientY - centerY;
+    
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    const maxDistance = rect.width / 2;
+    
+    if (distance <= maxDistance) {
+      setTouchActive(true);
+      const normalizedX = deltaX / maxDistance;
+      const normalizedY = deltaY / maxDistance;
+      onMobileMove?.(normalizedX, -normalizedY);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isMobile || !touchActive || !joystickRef.current) return;
+    
+    const touch = e.touches[0];
+    const rect = joystickRef.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    
+    const deltaX = touch.clientX - centerX;
+    const deltaY = touch.clientY - centerY;
+    
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    const maxDistance = rect.width / 2;
+    
+    if (distance <= maxDistance) {
+      const normalizedX = deltaX / maxDistance;
+      const normalizedY = deltaY / maxDistance;
+      onMobileMove?.(normalizedX, -normalizedY);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (!isMobile) return;
+    setTouchActive(false);
+    onMobileMove?.(0, 0);
+  };
+
   // Show boss name with animation when all items are collected
   useEffect(() => {
     if (hasAllItems && !bossDefeated) {
@@ -290,6 +354,19 @@ function UI({ gameState, bossHealth, bossDefeated = false }: UIProps) {
         `}} />
       </div>
       
+      {/* Mobile Controls */}
+      {isMobile && (
+        <div 
+          ref={joystickRef}
+          className="mobile-joystick"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+          <div className={`joystick-knob ${touchActive ? 'active' : ''}`} />
+        </div>
+      )}
+      
       {/* Vibe Jam link - placed outside the game-ui div so it can be clicked */}
       <a 
         target="_blank" 
@@ -313,6 +390,38 @@ function UI({ gameState, bossHealth, bossDefeated = false }: UIProps) {
       >
         🕹️ Vibe Jam 2025
       </a>
+
+      {/* Add the CSS for mobile controls */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        .mobile-joystick {
+          position: fixed;
+          bottom: 80px;
+          left: 50px;
+          width: 120px;
+          height: 120px;
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 50%;
+          border: 2px solid rgba(255, 255, 255, 0.3);
+          z-index: 1000;
+          touch-action: none;
+        }
+
+        .joystick-knob {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          width: 40px;
+          height: 40px;
+          background: rgba(255, 255, 255, 0.5);
+          border-radius: 50%;
+          transform: translate(-50%, -50%);
+          transition: transform 0.1s;
+        }
+
+        .joystick-knob.active {
+          background: rgba(255, 255, 255, 0.8);
+        }
+      `}} />
     </>
   );
 }

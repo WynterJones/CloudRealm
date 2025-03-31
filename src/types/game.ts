@@ -10,4 +10,6 @@ export interface GameState {
   stage: number;
   collectedBlocks: Array<{ x: number; z: number }>;
   isInvulnerable: boolean;
+  bossHealth: number;
+  bossDefeated: boolean;
 }
