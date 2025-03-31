@@ -6,6 +6,7 @@ import Bridge from './Bridge.tsx';
 import Player from './Player.tsx';
 import UI from './UI.tsx';
 import Boss from './Boss.tsx';
+import AdBillboards from './AdBillboards.tsx';
 import { GameState } from '../types/game';
 
 function Game() {
@@ -113,6 +114,9 @@ function Game() {
         {/* Space background */}
         <color attach="background" args={['#000010']} />
         <Stars radius={100} depth={50} count={2500} factor={4} saturation={0} fade />
+        
+        {/* Floating ad billboards in space */}
+        <AdBillboards />
         
         {/* Improved lighting setup */}
         <ambientLight intensity={0.6} /> {/* Increased ambient light */}
