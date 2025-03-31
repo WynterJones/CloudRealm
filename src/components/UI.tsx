@@ -145,7 +145,37 @@ function UI({ gameState, bossHealth, bossDefeated = false, onMobileMove }: UIPro
   }, [bossDefeated]);
   
   return (
-    <>
+    <div className="fixed inset-0 pointer-events-none">
+      {/* Mobile joystick */}
+      {isMobile && (
+        <div
+          ref={joystickRef}
+          className="fixed bottom-8 left-8 w-24 h-24 rounded-full bg-white/10 border-2 border-white/20 pointer-events-auto"
+          style={{
+            zIndex: 10001,
+            background: 'rgba(255, 255, 255, 0.15)',
+            boxShadow: '0 0 20px rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(4px)'
+          }}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+          <div
+            className="absolute w-8 h-8 rounded-full"
+            style={{
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              transition: touchActive ? 'none' : 'all 0.2s ease-out',
+              background: 'rgba(255, 255, 255, 0.4)',
+              boxShadow: '0 0 10px rgba(255, 255, 255, 0.3)'
+            }}
+          />
+        </div>
+      )}
+      
+      {/* Rest of UI elements */}
       <div className="game-ui">
         <div className="p-4 flex flex-col h-full">
           <div className="flex justify-between w-full">
@@ -354,19 +384,6 @@ function UI({ gameState, bossHealth, bossDefeated = false, onMobileMove }: UIPro
         `}} />
       </div>
       
-      {/* Mobile Controls */}
-      {isMobile && (
-        <div 
-          ref={joystickRef}
-          className="mobile-joystick"
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-        >
-          <div className={`joystick-knob ${touchActive ? 'active' : ''}`} />
-        </div>
-      )}
-      
       {/* Vibe Jam link - placed outside the game-ui div so it can be clicked */}
       <a 
         target="_blank" 
@@ -422,7 +439,7 @@ function UI({ gameState, bossHealth, bossDefeated = false, onMobileMove }: UIPro
           background: rgba(255, 255, 255, 0.8);
         }
       `}} />
-    </>
+    </div>
   );
 }
 

@@ -18,6 +18,7 @@ interface PlayerProps {
 
 export interface PlayerHandle {
   handleMobileMove: (x: number, y: number) => void;
+  clearMobileInput: () => void;
 }
 
 const Player = forwardRef<PlayerHandle, PlayerProps>(({ 
@@ -75,11 +76,14 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
       mobileVelocity.current.set(x, y);
       mobileInputActive.current = true;
       
-      // Play music on first movement if not already started
       if (!musicStartedRef.current) {
         playMusic();
         musicStartedRef.current = true;
       }
+    },
+    clearMobileInput: () => {
+      mobileVelocity.current.set(0, 0);
+      mobileInputActive.current = false;
     }
   }));
 
