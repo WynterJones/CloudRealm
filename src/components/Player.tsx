@@ -332,11 +332,6 @@ function Player({ gameState, setGameState }: PlayerProps) {
           {gameState.weapon && (
             <WeaponOrbit 
               weaponType={gameState.weapon} 
-              playerPosition={new Vector3(
-                positionRef.current.x,
-                playerRef.current ? playerRef.current.position.y : 0.2,
-                positionRef.current.z
-              )} 
             />
           )}
         </group>
