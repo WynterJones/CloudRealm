@@ -40,14 +40,14 @@ function AdBillboards() {
     const positions = [
       // Left side position
       { 
-        position: [-12, 5, 30], 
+        position: [-19, -1, 30], 
         adType: 'barnum',
         rotationSpeed: 0.54,
         initialRotation: Math.PI * 0.2
       },
       // Right side position
       { 
-        position: [12, 5, 45], 
+        position: [28, 5, 35], 
         adType: 'cf',
         rotationSpeed: 0.23,
         initialRotation: Math.PI * -0.2

@@ -7,6 +7,7 @@ import Player from './Player.tsx';
 import UI from './UI.tsx';
 import Boss from './Boss.tsx';
 import AdBillboards from './AdBillboards.tsx';
+import IntroMessages from './IntroMessages.tsx';
 import { GameState } from '../types/game';
 
 function Game() {
@@ -18,6 +19,8 @@ function Game() {
     stage: 0,
     collectedBlocks: []
   });
+  
+  const [showIntro, setShowIntro] = useState(true);
 
   // Check if all items are collected to spawn the boss
   const hasAllItems = gameState.weapon !== null && gameState.armour !== null && gameState.magic !== null;
@@ -99,6 +102,10 @@ function Game() {
     }
   };
 
+  const handleIntroComplete = () => {
+    setShowIntro(false);
+  };
+
   return (
     <div className="relative w-full h-full">
       <Canvas
@@ -158,6 +165,9 @@ function Game() {
         {hasAllItems && <Boss playerPosition={gameState.position} gameState={gameState} />}
       </Canvas>
       <UI gameState={gameState} />
+      
+      {/* Intro Messages */}
+      {showIntro && <IntroMessages onComplete={handleIntroComplete} />}
       
       {/* Wynter logo link */}
       <a 

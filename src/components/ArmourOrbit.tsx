@@ -45,7 +45,7 @@ function ArmourOrbit({ armourType }: ArmourOrbitProps) {
   const screenZ = -1.0; // Distance from camera
   
   // For animation effects
-  const spinSpeed = 1.5; // Slightly slower spin speed
+  const spinSpeed = 0.3; // Slightly slower spin speed
   
   // Animation frame - always called regardless of model loading status
   useFrame((state, delta) => {
@@ -65,9 +65,9 @@ function ArmourOrbit({ armourType }: ArmourOrbitProps) {
   const getScale = () => {
     switch (armourType) {
       case 'gold':
-        return [0.3, 0.3, 0.3] as [number, number, number];
+        return [0.2, 0.2, 0.2] as [number, number, number];
       case 'steel':
-        return [0.3, 0.3, 0.3] as [number, number, number];
+        return [0.2, 0.2, 0.2] as [number, number, number];
       case 'knowledge':
         return [0.3, 0.3, 0.3] as [number, number, number]; // Smaller scale for book
       default:

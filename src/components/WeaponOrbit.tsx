@@ -93,7 +93,7 @@ function WeaponOrbit({ weaponType }: WeaponOrbitProps) {
       case 'axe':
         return [0.5, 0.5, 0.5] as [number, number, number];
       case 'fist':
-        return [0.5, 0.5, 0.5] as [number, number, number]; // Larger scale for fists
+        return [0.4, 0.4, 0.4] as [number, number, number]; // Larger scale for fists
       default:
         return [0.5, 0.5, 0.5] as [number, number, number];
     }
