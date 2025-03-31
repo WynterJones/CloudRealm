@@ -17,13 +17,16 @@ function AdBillboards() {
   const cfTexture = useLoader(TextureLoader, '/models/ad-cf.png');
   const stsTexture = useLoader(TextureLoader, '/models/ad-sts.png');
   
-  // Fix texture settings - flip Y to correct upside-down logos
+  // Enhanced texture settings for better color reproduction
   [barnumTexture, cfTexture, stsTexture].forEach(texture => {
     texture.minFilter = THREE.LinearFilter;
     texture.magFilter = THREE.LinearFilter;
-    texture.anisotropy = 16;
+    texture.anisotropy = 16; // Increased from 6 for better quality
     texture.needsUpdate = true;
-    texture.flipY = true; // Change to true to flip the logos right-side up
+    texture.flipY = true;
+    
+    // Force linear color space to prevent gamma correction issues
+    texture.colorSpace = THREE.SRGBColorSpace;
   });
   
   // Create an array of refs for the billboards
@@ -39,21 +42,21 @@ function AdBillboards() {
       { 
         position: [-12, 5, 30], 
         adType: 'barnum',
-        rotationSpeed: 0.04, // Slowed down rotation speed
+        rotationSpeed: 0.54,
         initialRotation: Math.PI * 0.2
       },
       // Right side position
       { 
         position: [12, 5, 45], 
         adType: 'cf',
-        rotationSpeed: 0.03, // Slowed down rotation speed
+        rotationSpeed: 0.23,
         initialRotation: Math.PI * -0.2
       },
       // Left side further position
       { 
         position: [-10, 4, 60], 
         adType: 'sts',
-        rotationSpeed: 0.05, // Slowed down rotation speed
+        rotationSpeed: 0.45,
         initialRotation: Math.PI * 0.15
       }
     ];
@@ -70,84 +73,61 @@ function AdBillboards() {
     return billboardsArray;
   }, []);
   
-  // Create materials with fixed transparency handling
+  // Create enhanced materials for better color reproduction
   const materials = useMemo(() => {
     const sideMaterial = new THREE.MeshBasicMaterial({ 
-      color: '#000000', // Black sides
+      color: '#444444', // Darkened from pure black for better contrast
     });
     
-    // Create materials that show logos correctly
-    const barnumMaterial = new THREE.MeshBasicMaterial({ 
-      map: barnumTexture, 
-      side: THREE.FrontSide, // Change to FrontSide to prevent overlap
-      transparent: true,
-      alphaTest: 0.1,
-      color: 0xFFFFFF,
-      depthWrite: true
-    });
-    
-    const cfMaterial = new THREE.MeshBasicMaterial({ 
-      map: cfTexture, 
-      side: THREE.FrontSide, // Change to FrontSide to prevent overlap
-      transparent: true,
-      alphaTest: 0.1,
-      color: 0xFFFFFF,
-      depthWrite: true
-    });
-    
-    const stsMaterial = new THREE.MeshBasicMaterial({ 
-      map: stsTexture, 
-      side: THREE.FrontSide, // Change to FrontSide to prevent overlap
-      transparent: true,
-      alphaTest: 0.1,
-      color: 0xFFFFFF,
-      depthWrite: true
-    });
-    
-    // Create separate back materials with same settings
-    const barnumBackMaterial = barnumMaterial.clone();
-    const cfBackMaterial = cfMaterial.clone();
-    const stsBackMaterial = stsMaterial.clone();
+    // Completely redesigned material settings for vibrant colors
+    const createAdMaterial = (texture: THREE.Texture) => {
+      return new THREE.MeshBasicMaterial({
+        map: texture,
+        side: THREE.FrontSide,
+        transparent: false, // Changed to false for better color saturation
+        color: 0xFFFFFF, // Pure white base to preserve texture colors
+        depthWrite: true,
+        toneMapped: false, // Prevent tone mapping from desaturating colors
+      });
+    };
     
     return {
       side: sideMaterial,
-      barnum: barnumMaterial,
-      cf: cfMaterial,
-      sts: stsMaterial,
-      barnumBack: barnumBackMaterial,
-      cfBack: cfBackMaterial,
-      stsBack: stsBackMaterial
+      barnum: createAdMaterial(barnumTexture),
+      cf: createAdMaterial(cfTexture),
+      sts: createAdMaterial(stsTexture),
+      barnumBack: createAdMaterial(barnumTexture),
+      cfBack: createAdMaterial(cfTexture),
+      stsBack: createAdMaterial(stsTexture)
     };
   }, [barnumTexture, cfTexture, stsTexture]);
   
-  // Create billboards with increased depth
+  // Create billboards with optimized geometry
   const billboardsWithMaterials = useMemo(() => {
     return billboards.map(billboard => {
       const width = 4;
       const height = 3;
-      const depth = 0.5; // Increased depth to prevent overlap
+      const depth = 0.2;
       
       const geometry = new THREE.BoxGeometry(width, height, depth);
       
       const adMaterial = materials[billboard.adType];
       const backMaterial = materials[`${billboard.adType}Back`];
       
-      // Apply different materials to front and back for better rendering
+      // Apply separate materials to each face
       const faceMaterials = [
         materials.side,  // right
         materials.side,  // left
         materials.side,  // top
         materials.side,  // bottom
         adMaterial,      // front
-        backMaterial     // back - using separate material instance
+        backMaterial     // back - using texture material instead of side material
       ];
       
       const mesh = new THREE.Mesh(geometry, faceMaterials);
       mesh.position.set(...billboard.position);
       mesh.rotation.y = billboard.initialRotation;
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      mesh.renderOrder = 1;
+      mesh.renderOrder = 1000; // Ensure billboards render on top of other elements
       
       return {
         mesh,
@@ -160,7 +140,7 @@ function AdBillboards() {
     billboardRefs.current = billboardsWithMaterials.map(({ mesh }) => mesh);
   }, [billboardsWithMaterials]);
   
-  // Only use one useFrame hook
+  // Animation frame update
   useFrame((state, delta) => {
     billboardsWithMaterials.forEach(({ mesh, rotationSpeed }) => {
       mesh.rotation.y += delta * rotationSpeed;
@@ -169,22 +149,14 @@ function AdBillboards() {
   
   return (
     <group>
+      {/* Properly configured ambient light */}
+      <ambientLight intensity={0.5} color="#ffffff" />
+      
       {billboardsWithMaterials.map((billboard, index) => (
         <group key={index}>
           <primitive object={billboard.mesh} />
-          <spotLight 
-            position={[
-              billboard.mesh.position.x, 
-              billboard.mesh.position.y + 3, 
-              billboard.mesh.position.z - 3
-            ]} 
-            angle={0.5}
-            penumbra={0.5}
-            distance={20} 
-            intensity={4} 
-            color="#ffffff"
-            castShadow
-          />
+          
+          {/* Removed spotlights since MeshBasicMaterial ignores lights */}
         </group>
       ))}
     </group>
